@@ -41,9 +41,11 @@ struct SVGUtil
 	CComPtr<ID2D1DeviceContext> pDeviceContext;
 	CComPtr<ID2D1SolidColorBrush> defaultFillBrush;
 	CComPtr<ID2D1SolidColorBrush> defaultStrokeBrush;
+	std::unique_ptr<SVGGraphicsElement> rootElement;
 
 	bool init(HWND wnd);
 	void resize();
 	void render();
+	bool parse(const wchar_t* fileName);
 };
 

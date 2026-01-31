@@ -1,5 +1,74 @@
 #include "SVGUtil.h"
 #include <sstream>
+#include <string_view>
+#include <xmllite.h>
+
+struct TransformFunction {
+	std::wstring name;
+	std::vector<float> values;
+};
+
+static void ltrim_str(std::wstring_view& source) {
+	size_t pos = source.find_first_not_of(L" \t\r\n");
+
+	if (pos == std::wstring_view::npos) {
+		source.remove_prefix(source.length());
+	}
+	else {
+		source.remove_prefix(pos);
+	}
+}
+
+static bool get_transform_functions(std::wstring_view& source, std::vector<TransformFunction>& functions) {
+	size_t start = 0;
+
+	while (true) {
+		TransformFunction f;
+		size_t pos = source.find(L'(', start);
+
+		if (pos == std::wstring::npos) {
+			return false;
+		}
+
+		std::wstring_view function_name = source.substr(start, pos - start);
+
+		ltrim_str(function_name);
+
+		if (function_name.empty()) {
+			return false;
+		}
+
+		f.name = function_name;
+
+		start = pos + 1;
+
+		pos = source.find(L')', start);
+
+		if (pos == std::wstring::npos) {
+			return false;
+		}
+
+		std::wstring_view values = source.substr(start, pos - start);
+
+		std::wstring value_text(values);
+		std::wstringstream ws(value_text);
+		float v;
+
+		while (ws >> v) {
+			f.values.push_back(v);
+		}
+
+		functions.push_back(f);
+
+		start = pos + 1;
+
+		if (start >= source.length()) {
+			break;
+		}
+	}
+
+	return true;
+}
 
 void SVGGElement::render(ID2D1DeviceContext* pContext) {
 	//Save the old transform
@@ -160,42 +229,124 @@ void SVGUtil::render()
 	pDeviceContext->BeginDraw();
 	pDeviceContext->Clear(D2D1::ColorF(D2D1::ColorF::Beige));
 
-	CComPtr<ID2D1SolidColorBrush> pBrush;
-
-	HRESULT hr = pDeviceContext->CreateSolidColorBrush(
-		D2D1::ColorF(0xE9/256.0f, 0x71/256.0f, 0x32/256.0f),
-		&pBrush
-	);
 	
-	if (!SUCCEEDED(hr)) {
-		return;
-	}
-
-	D2D1_STROKE_STYLE_PROPERTIES strokeStyleProps = D2D1::StrokeStyleProperties();
-	
-	//Set stroke to dots
-	strokeStyleProps.dashStyle = D2D1_DASH_STYLE_DASH;
-
-	CComPtr<ID2D1StrokeStyle> pStrokeStyle;
-
-	hr = pFactory->CreateStrokeStyle(
-		strokeStyleProps,
-		nullptr,
-		0,
-		&pStrokeStyle
-	);
-
-	if (!SUCCEEDED(hr)) {
-		return;
-	}
-
-	pDeviceContext->SetTransform(D2D1::Matrix3x2F::Translation(-1211.0f, -981.0f));
-
-	pDeviceContext->FillRectangle(
-		D2D1::RectF(1214.5, 1074.5, 1732.0f, 1436.0f),
-		pBrush
-	);
 
 	pDeviceContext->EndDraw();
 }
 
+bool get_element_name(IXmlReader *pReader, std::wstring_view& name) {
+	const wchar_t* pwszLocalName = NULL;
+	UINT len;
+
+	HRESULT hr = pReader->GetLocalName(&pwszLocalName, &len);
+
+	if (!SUCCEEDED(hr)) {
+		return false;
+	}
+
+	name = std::wstring_view(pwszLocalName, len);
+
+	return true;
+}
+
+bool get_attribute(IXmlReader* pReader, const wchar_t* attr_name, std::wstring_view& attr_value) {
+	const wchar_t* pwszValue = NULL;
+	UINT len;
+
+	HRESULT hr = pReader->MoveToAttributeByName(attr_name, NULL);
+
+	if (hr == S_FALSE) {
+		return false; //Attribute not found
+	}
+
+	if (!SUCCEEDED(hr)) {
+		return false;
+	}
+
+	hr = pReader->GetValue(&pwszValue, &len);
+
+	if (!SUCCEEDED(hr)) {
+		return false;
+	}
+
+	attr_value = std::wstring_view(pwszValue, len);
+
+	return true;
+}
+
+bool SVGUtil::parse(const wchar_t* fileName) {
+	CComPtr<IXmlReader> pReader;
+
+	HRESULT hr = ::CreateXmlReader(__uuidof(IXmlReader), (void**)&pReader, NULL);
+
+	if (!SUCCEEDED(hr)) {
+		return false;
+	}
+
+	CComPtr<IStream> pFileStream;
+
+	hr = SHCreateStreamOnFileEx(fileName, STGM_READ | STGM_SHARE_DENY_WRITE, FILE_ATTRIBUTE_NORMAL, FALSE, NULL, &pFileStream);
+	
+	if (!SUCCEEDED(hr)) {
+		return false;
+	}
+
+	hr = pReader->SetInput(pFileStream);
+
+	if (!SUCCEEDED(hr)) {
+		return false;
+	}
+
+	while (true) {
+		XmlNodeType nodeType;
+
+		hr = pReader->Read(&nodeType);
+
+		if (hr == S_FALSE) {
+			break; //End of file
+		}
+
+		if (!SUCCEEDED(hr)) {
+			return false;
+		}
+
+		if (nodeType == XmlNodeType_Element) {
+			std::wstring_view element_name, attr_value;
+
+			if (!get_element_name(pReader, element_name)) {
+				return false;
+			}
+
+			if (get_attribute(pReader, L"transform", attr_value)) {
+				std::vector<TransformFunction> functions;
+				if (get_transform_functions(attr_value, functions)) {
+					for (auto& f : functions) {
+						OutputDebugStringW(f.name.c_str());
+						OutputDebugStringW(L"\n\t");	
+
+						for (float v : f.values) {
+							OutputDebugStringW(std::to_wstring(v).c_str());
+							OutputDebugStringW(L", ");
+						}
+
+						OutputDebugStringW(L"\n");
+					}
+				}
+			}
+		}
+		else if (nodeType == XmlNodeType_Text) {
+			const wchar_t* pwszValue = NULL;
+
+			hr = pReader->GetValue(&pwszValue, NULL);
+			if (!SUCCEEDED(hr)) {
+				return false;
+			}
+
+			OutputDebugStringW(L"\tValue: ");
+			OutputDebugStringW(pwszValue);
+			OutputDebugStringW(L"\n");
+		}
+	}
+
+	return true;
+}

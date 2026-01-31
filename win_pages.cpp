@@ -101,7 +101,7 @@ public:
         if (id == ID_FILE_OPEN) {
             std::wstring filename;
 
-            test_xml();
+			svgUtil.parse(L"test.svg");
         }
         else if (id == IDM_EXIT) {
             onClose();
