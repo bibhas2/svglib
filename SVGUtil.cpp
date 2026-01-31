@@ -70,7 +70,7 @@ static bool get_transform_functions(std::wstring_view& source, std::vector<Trans
 	return true;
 }
 
-void SVGGElement::render(ID2D1DeviceContext* pContext) {
+void SVGGraphicsElement::render_tree(ID2D1DeviceContext* pContext) {
 	//Save the old transform
 	D2D1_MATRIX_3X2_F oldTransform;
 
@@ -85,22 +85,26 @@ void SVGGElement::render(ID2D1DeviceContext* pContext) {
 
 	pContext->SetTransform(combinedTransform);
 
+	render(pContext);
+
 	//Render all child elements
 	for (const auto& child : children) {
-		child->render(pContext);
+		child->render_tree(pContext);
 	}
 
 	pContext->SetTransform(oldTransform);
 }
 
-void SVGPathElement::buildPath(ID2D1Factory* pFactory, const wchar_t* pathData) {
+void SVGPathElement::buildPath(ID2D1Factory* pFactory, const std::wstring_view& pathData) {
 	pFactory->CreatePathGeometry(&pathGeometry);
 
 	CComPtr<ID2D1GeometrySink> pSink;
 
 	pathGeometry->Open(&pSink);
 
-	std::wstringstream ws(pathData);
+	std::wstring pathStr(pathData);
+	//Direct creation of string stream from string view only from C++ 26
+	std::wstringstream ws(pathStr);
 	wchar_t cmd = 0, last_cmd = 0;
 
 	while (true) {

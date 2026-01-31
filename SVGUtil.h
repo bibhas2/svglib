@@ -15,6 +15,7 @@ struct SVGGraphicsElement {
 	std::vector<D2D1_MATRIX_3X2_F> transforms;
 	std::vector<float> points;
 
+	virtual void render_tree(ID2D1DeviceContext* pContext);
 	virtual void render(ID2D1DeviceContext* pContext) = 0;
 };
 
@@ -29,7 +30,7 @@ struct SVGRectElement : public SVGGraphicsElement {
 struct SVGPathElement : public SVGGraphicsElement {
 	CComPtr<ID2D1PathGeometry> pathGeometry;
 
-	void buildPath(ID2D1Factory* pFactory, const wchar_t* pathData);
+	void buildPath(ID2D1Factory* pFactory, const std::wstring_view& pathData);
 	void render(ID2D1DeviceContext* pContext) override;
 };
 
