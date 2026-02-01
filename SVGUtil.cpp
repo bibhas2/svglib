@@ -561,8 +561,11 @@ bool SVGUtil::parse(const wchar_t* fileName) {
 					parent_stack.top()->children.push_back(new_element);
 				}
 
-				parent_stack.push(new_element);
 			}
+
+			//Push the new element onto the stack
+			//This may be null if the element is not supported
+			parent_stack.push(new_element);
 		}
 		else if (nodeType == XmlNodeType_Text) {
 			const wchar_t* pwszValue = NULL;
