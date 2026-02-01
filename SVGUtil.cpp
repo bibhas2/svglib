@@ -20,6 +20,32 @@ static void ltrim_str(std::wstring_view& source) {
 	}
 }
 
+bool get_rgba(std::wstring_view source, float& r, float& g, float& b, float& a) {
+	//Parse #RRGGBBAA color from the source
+	if (source.length() < 7 || source[0] != L'#') {
+		return false;
+	}
+
+	std::wstring rStr(source.substr(1, 2));
+	std::wstring gStr(source.substr(3, 2));
+	std::wstring bStr(source.substr(5, 2));
+
+	r = static_cast<float>(std::stoul(rStr, nullptr, 16)) / 255.0f;
+	g = static_cast<float>(std::stoul(gStr, nullptr, 16)) / 255.0f;
+	b = static_cast<float>(std::stoul(bStr, nullptr, 16)) / 255.0f;
+
+	if (source.length() == 9) {
+		std::wstring aStr(source.substr(7, 2));
+
+		a = static_cast<float>(std::stoul(aStr, nullptr, 16)) / 255.0f;
+	}
+	else {
+		a = 1.0f;
+	}
+
+	return true;
+}
+
 static bool get_transform_functions(const std::wstring_view& source, std::vector<TransformFunction>& functions) {
 	size_t start = 0;
 
@@ -195,14 +221,19 @@ void SVGPathElement::render(ID2D1DeviceContext* pContext) {
 
 void SVGRectElement::render(ID2D1DeviceContext* pContext) {
 	OutputDebugStringW(L"Drawing rectangle\n");
-	pContext->FillRectangle(
-		D2D1::RectF(points[0], points[1], points[0] + points[2], points[1] + points[3]),
-		fillBrush
-	);
-	pContext->DrawRectangle(
-		D2D1::RectF(points[0], points[1], points[0] + points[2], points[1] + points[3]),
-		strokeBrush
-	);
+	if (fillBrush) {
+		pContext->FillRectangle(
+			D2D1::RectF(points[0], points[1], points[0] + points[2], points[1] + points[3]),
+			fillBrush
+		);
+	}
+	if (strokeBrush) {
+		pContext->DrawRectangle(
+			D2D1::RectF(points[0], points[1], points[0] + points[2], points[1] + points[3]),
+			strokeBrush,
+			strokeWidth
+		);
+	}
 }
 
 bool SVGUtil::init(HWND _wnd)
@@ -433,9 +464,55 @@ bool SVGUtil::parse(const wchar_t* fileName) {
 					}
 				}
 
-				//Set default brushes
-				new_element->fillBrush = defaultFillBrush;
-				new_element->strokeBrush = defaultStrokeBrush;
+				//Set brushes
+				if (get_attribute(pReader, L"stroke", attr_value)) {
+					if (attr_value == L"none") {
+						new_element->strokeBrush = nullptr;
+					}
+					else {
+						float r, g, b, a;
+
+						if (get_rgba(attr_value, r, g, b, a)) {
+							CComPtr<ID2D1SolidColorBrush> strokeBrush;
+							hr = pDeviceContext->CreateSolidColorBrush(
+								D2D1::ColorF(r, g, b, a),
+								&strokeBrush
+							);
+
+							if (SUCCEEDED(hr)) {
+								new_element->strokeBrush = strokeBrush;
+							}
+						}
+					}
+				}
+
+				if (get_attribute(pReader, L"fill", attr_value)) {
+					if (attr_value == L"none") {
+						new_element->fillBrush = nullptr;
+					}
+					else {
+						float r, g, b, a;
+						if (get_rgba(attr_value, r, g, b, a)) {
+							CComPtr<ID2D1SolidColorBrush> fillBrush;
+							hr = pDeviceContext->CreateSolidColorBrush(
+								D2D1::ColorF(r, g, b, a),
+								&fillBrush
+							);
+							if (SUCCEEDED(hr)) {
+								new_element->fillBrush = fillBrush;
+							}
+						}
+					}
+				}
+
+				//Get stroke width
+				float strokeWidth;
+
+				if (get_attribute(pReader, L"stroke-width", strokeWidth)) {
+					new_element->strokeWidth = strokeWidth;
+				} else {
+					new_element->strokeWidth = 1.0f; //Default stroke width
+				}
 
 				if (!parent_stack.empty()) {
 					parent_stack.top()->children.push_back(new_element);
