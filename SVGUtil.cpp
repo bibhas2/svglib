@@ -518,6 +518,10 @@ bool SVGUtil::parse(const wchar_t* fileName) {
 		}
 
 		if (nodeType == XmlNodeType_Element) {
+			//We must call IsEmptyElement before reading
+			//any attributes!!!
+			bool is_self_closing = pReader->IsEmptyElement();
+
 			std::wstring_view element_name, attr_value;
 
 			if (!get_element_name(pReader, element_name)) {
@@ -617,14 +621,14 @@ bool SVGUtil::parse(const wchar_t* fileName) {
 						float r, g, b, a;
 
 						if (get_rgba(attr_value, r, g, b, a)) {
-							CComPtr<ID2D1SolidColorBrush> strokeBrush;
+							CComPtr<ID2D1SolidColorBrush> brush;
 							hr = pDeviceContext->CreateSolidColorBrush(
 								D2D1::ColorF(r, g, b, a),
-								&strokeBrush
+								&brush
 							);
 
 							if (SUCCEEDED(hr)) {
-								new_element->strokeBrush = strokeBrush;
+								new_element->strokeBrush = brush;
 							}
 						}
 					}
@@ -642,13 +646,13 @@ bool SVGUtil::parse(const wchar_t* fileName) {
 					else {
 						float r, g, b, a;
 						if (get_rgba(attr_value, r, g, b, a)) {
-							CComPtr<ID2D1SolidColorBrush> fillBrush;
+							CComPtr<ID2D1SolidColorBrush> brush;
 							hr = pDeviceContext->CreateSolidColorBrush(
 								D2D1::ColorF(r, g, b, a),
-								&fillBrush
+								&brush
 							);
 							if (SUCCEEDED(hr)) {
-								new_element->fillBrush = fillBrush;
+								new_element->fillBrush = brush;
 							}
 						}
 					}
@@ -670,13 +674,25 @@ bool SVGUtil::parse(const wchar_t* fileName) {
 
 				if (parent_element) {
 					//Add the new element to its parent
+					OutputDebugStringW(L"Parent::Child: ");
+					OutputDebugStringW(parent_element->tagName.c_str());
+					OutputDebugStringW(L"::");
+					OutputDebugStringW(new_element->tagName.c_str());
+					OutputDebugStringW(L"\n");
 					parent_element->children.push_back(new_element);
 				}
 			}
 
-			//Push the new element onto the stack
-			//This may be null if the element is not supported
-			parent_stack.push(new_element);
+			//Do not add self closing elements like <circle .../> to the parent stack
+			if (!is_self_closing)
+			{
+				//Push the new element onto the stack
+				//This may be null if the element is not supported
+				OutputDebugStringW(L"Pushing to parent stack: ");
+				OutputDebugStringW(new_element->tagName.c_str());
+				OutputDebugStringW(L"\n");
+				parent_stack.push(new_element);
+			}
 		}
 		else if (nodeType == XmlNodeType_Text) {
 			const wchar_t* pwszValue = NULL;
@@ -687,6 +703,16 @@ bool SVGUtil::parse(const wchar_t* fileName) {
 			}
 		}
 		else if (nodeType == XmlNodeType_EndElement) {
+			std::wstring_view element_name;
+
+			if (!get_element_name(pReader, element_name)) {
+				return false;
+			}
+
+			OutputDebugStringW(L"End Element: ");
+			OutputDebugStringW(element_name.data());
+			OutputDebugStringW(L"\n");
+
 			if (!parent_stack.empty()) {
 				parent_stack.pop();
 			}
