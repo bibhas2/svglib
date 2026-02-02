@@ -39,7 +39,13 @@ public:
         if (id == ID_FILE_OPEN) {
             std::wstring filename;
 
-			svgUtil.parse(L"test.svg");
+            if (!openFileName(L"Open SVG File",
+                { { L"SVG Files", L"*.svg" }, { L"All Files", L"*.*" } },
+                filename)) {
+                return;
+			}
+
+			svgUtil.parse(filename.c_str());
 
 			svgUtil.redraw();
         }
