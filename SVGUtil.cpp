@@ -108,7 +108,10 @@ void SVGGraphicsElement::render_tree(ID2D1DeviceContext* pContext) {
 	if (combinedTransform) {
 		OutputDebugStringW(L"Applying transform\n");
 		pContext->GetTransform(&oldTransform);
-		pContext->SetTransform(combinedTransform.value());
+
+		auto totalTransform = oldTransform * combinedTransform.value();
+
+		pContext->SetTransform(totalTransform);
 	}
 
 	render(pContext);
