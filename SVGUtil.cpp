@@ -304,6 +304,22 @@ void SVGRectElement::render(ID2D1DeviceContext* pContext) {
 	}
 }
 
+void SVGCircleElement::render(ID2D1DeviceContext* pContext) {
+	if (fillBrush) {
+		pContext->FillEllipse(
+			D2D1::Ellipse(D2D1::Point2F(points[0], points[1]), points[2], points[2]),
+			fillBrush
+		);
+	}
+	if (strokeBrush) {
+		pContext->DrawEllipse(
+			D2D1::Ellipse(D2D1::Point2F(points[0], points[1]), points[2], points[2]),
+			strokeBrush,
+			strokeWidth
+		);
+	}
+}
+
 bool SVGUtil::init(HWND _wnd)
 {
 	wnd = _wnd;
@@ -518,7 +534,24 @@ bool SVGUtil::parse(const wchar_t* fileName) {
 					new_element->points.push_back(width);
 					new_element->points.push_back(height);
 				}
-			} else if (element_name == L"path") {
+			}
+			else if (element_name == L"circle") {
+				float cx, cy, r;
+
+				if (get_attribute(pReader, L"cx", cx) &&
+					get_attribute(pReader, L"cy", cy) &&
+					get_attribute(pReader, L"r", r)) {
+					
+					auto circle_element = std::make_shared<SVGCircleElement>();
+
+					circle_element->points.push_back(cx);
+					circle_element->points.push_back(cy);
+					circle_element->points.push_back(r);
+
+					new_element = circle_element;
+				}
+			}
+			else if (element_name == L"path") {
 				if (get_attribute(pReader, L"d", attr_value)) {
 					auto path_element = std::make_shared<SVGPathElement>();
 
