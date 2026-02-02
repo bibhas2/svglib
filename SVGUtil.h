@@ -11,6 +11,7 @@
 struct SVGGraphicsElement {
 	std::wstring tagName;
 	float strokeWidth = 1.0f;
+	float fillOpacity = 1.0f;
 	CComPtr<ID2D1SolidColorBrush> fillBrush;
 	CComPtr<ID2D1SolidColorBrush> strokeBrush;
 	std::vector<std::shared_ptr<SVGGraphicsElement>> children;

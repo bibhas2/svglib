@@ -639,16 +639,31 @@ bool SVGUtil::parse(const wchar_t* fileName) {
 					}
 				}
 
+				//Get fill opacity
+				float fillOpacity;
+
+				if (get_attribute(pReader, L"fill-opacity", fillOpacity)) {
+					new_element->fillOpacity = fillOpacity;
+				}
+				else {
+					if (parent_element) {
+						//Inherit fill opacity from parent
+						new_element->fillOpacity = parent_element->fillOpacity;
+					}
+				}
+
 				if (get_attribute(pReader, L"fill", attr_value)) {
 					if (attr_value == L"none") {
 						new_element->fillBrush = nullptr;
 					}
 					else {
 						float r, g, b, a;
+
 						if (get_rgba(attr_value, r, g, b, a)) {
 							CComPtr<ID2D1SolidColorBrush> brush;
+
 							hr = pDeviceContext->CreateSolidColorBrush(
-								D2D1::ColorF(r, g, b, a),
+								D2D1::ColorF(r, g, b, a * new_element->fillOpacity),
 								&brush
 							);
 							if (SUCCEEDED(hr)) {
@@ -669,7 +684,13 @@ bool SVGUtil::parse(const wchar_t* fileName) {
 				if (get_attribute(pReader, L"stroke-width", strokeWidth)) {
 					new_element->strokeWidth = strokeWidth;
 				} else {
-					new_element->strokeWidth = 1.0f; //Default stroke width
+					if (parent_element) {
+						//Inherit stroke width from parent
+						new_element->strokeWidth = parent_element->strokeWidth;
+					}
+					else {
+						new_element->strokeWidth = 1.0f; //Default stroke width
+					}
 				}
 
 				if (parent_element) {
