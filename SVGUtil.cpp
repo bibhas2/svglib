@@ -219,7 +219,7 @@ void SVGPathElement::buildPath(ID2D1Factory* pFactory, const std::wstring_view& 
 
 	wchar_t cmd = 0, last_cmd = 0;
 	bool is_in_figure = false;
-	std::wstring_view supported_cmds(L"MLHVQTCZz");
+	std::wstring_view supported_cmds(L"MLHVQTCSZz");
 	float current_x = 0.0, current_y = 0.0;
 	float last_ctrl_x = 0.0, last_ctrl_y = 0.0;
 
@@ -326,7 +326,8 @@ void SVGPathElement::buildPath(ID2D1Factory* pFactory, const std::wstring_view& 
 			current_y = y2;
 			last_ctrl_x = x1;
 			last_ctrl_y = y1;
-		} else if (cmd == L'C') {
+		} 
+		else if (cmd == L'C') {
 			float x1 = 0.0, y1 = 0.0, x2 = 0.0, y2 = 0.0, x3 = 0.0, y3 = 0.0;
 			ws >> x1 >> y1 >> x2 >> y2 >> x3 >> y3;
 			pSink->AddBezier(D2D1::BezierSegment(D2D1::Point2F(x1, y1), D2D1::Point2F(x2, y2), D2D1::Point2F(x3, y3)));
@@ -334,6 +335,30 @@ void SVGPathElement::buildPath(ID2D1Factory* pFactory, const std::wstring_view& 
 			//Update current point
 			current_x = x3;
 			current_y = y3;
+			last_ctrl_x = x2;
+			last_ctrl_y = y2;
+		}
+		else if (cmd == L'S') {
+			float x1 = 0.0, y1 = 0.0, x2 = 0.0, y2 = 0.0, x3 = 0.0, y3 = 0.0;
+			ws >> x2 >> y2 >> x3 >> y3;
+
+			//Calculate the first control point by reflecting the last control point
+			if (last_cmd == L'C' || last_cmd == L'S') {
+				x1 = 2 * current_x - last_ctrl_x;
+				y1 = 2 * current_y - last_ctrl_y;
+			}
+			else {
+				x1 = current_x;
+				y1 = current_y;
+			}
+
+			pSink->AddBezier(D2D1::BezierSegment(D2D1::Point2F(x1, y1), D2D1::Point2F(x2, y2), D2D1::Point2F(x3, y3)));
+
+			//Update current point
+			current_x = x3;
+			current_y = y3;
+			last_ctrl_x = x2;
+			last_ctrl_y = y2;
 		} else if (cmd == L'Z' || cmd == L'z') {
 			//Close the current figure
 			if (is_in_figure) {
