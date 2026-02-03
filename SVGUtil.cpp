@@ -134,8 +134,6 @@ bool build_transform_matrix(const std::wstring_view& transformStr, D2D1_MATRIX_3
 		return false;
 	}
 
-	outMatrix = D2D1::Matrix3x2F::Identity();
-
 	for (const auto& f : functions) {
 		if (f.name == L"translate") {
 			if (f.values.size() == 1) {
@@ -531,6 +529,9 @@ bool SVGUtil::parse(const wchar_t* fileName) {
 		return false;
 	}
 
+	//Clear any existing root element
+	rootElement = nullptr;
+
 	std::stack<std::shared_ptr<SVGGraphicsElement>> parent_stack;
 
 	while (true) {
@@ -566,10 +567,26 @@ bool SVGUtil::parse(const wchar_t* fileName) {
 
 			if (element_name == L"svg") {
 				new_element = std::make_shared<SVGGraphicsElement>();
-				rootElement = new_element;
+
 				//Set up default brushes
 				new_element->fillBrush = defaultFillBrush;
 				new_element->strokeBrush = nullptr;
+
+				if (!rootElement)
+				{
+					//This is the root <svg> element
+					rootElement = new_element;
+				}
+				else {
+					//Inner svg elements have some special treatment
+					float x = 0.0f, y = 0.0f, width = 100.0f, height = 100.0f;
+
+					if (get_attribute(pReader, L"x", x) &&
+						get_attribute(pReader, L"y", y)) {
+						//Position the inner SVG element
+						new_element->combinedTransform = D2D1::Matrix3x2F::Translation(x, y);
+					}
+				}
 			}
 			else if (element_name == L"rect") {
 				float x, y, width, height;
@@ -651,7 +668,13 @@ bool SVGUtil::parse(const wchar_t* fileName) {
 				new_element->tagName = element_name;
 
 				if (get_attribute(pReader, L"transform", attr_value)) {
-					D2D1_MATRIX_3X2_F trans;
+					D2D1_MATRIX_3X2_F trans = D2D1::Matrix3x2F::Identity();
+
+					//If the element already has a transform (like inner <svg>), combine them
+					if (new_element->combinedTransform)
+					{
+						trans = new_element->combinedTransform.value();
+					}
 
 					if (build_transform_matrix(attr_value, trans)) {
 						new_element->combinedTransform = trans;
