@@ -54,7 +54,8 @@ static bool get_transform_functions(const std::wstring_view& source, std::vector
 		size_t pos = source.find(L'(', start);
 
 		if (pos == std::wstring::npos) {
-			return false;
+			//No more functions left
+			return true;
 		}
 
 		std::wstring_view function_name = source.substr(start, pos - start);
