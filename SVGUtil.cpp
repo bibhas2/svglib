@@ -219,8 +219,9 @@ void SVGPathElement::buildPath(ID2D1Factory* pFactory, const std::wstring_view& 
 
 	wchar_t cmd = 0, last_cmd = 0;
 	bool is_in_figure = false;
-	std::wstring_view supported_cmds(L"MLHVQCZz");
+	std::wstring_view supported_cmds(L"MLHVQTCZz");
 	float current_x = 0.0, current_y = 0.0;
+	float last_ctrl_x = 0.0, last_ctrl_y = 0.0;
 
 	while (!ws.eof()) {
 		//Read command letter
@@ -301,6 +302,30 @@ void SVGPathElement::buildPath(ID2D1Factory* pFactory, const std::wstring_view& 
 			//Update current point
 			current_x = x2;
 			current_y = y2;
+			last_ctrl_x = x1;
+			last_ctrl_y = y1;
+		}
+		else if (cmd == L'T') {
+			float x1 = 0.0, y1 = 0.0, x2 = 0.0, y2 = 0.0;
+
+			ws >> x2 >> y2;
+
+			//Calculate the control point by reflecting the last control point
+			if (last_cmd == L'Q' || last_cmd == L'T') {
+				x1 = 2 * current_x - last_ctrl_x;
+				y1 = 2 * current_y - last_ctrl_y;
+			} else {
+				x1 = current_x;
+				y1 = current_y;
+			}
+
+			pSink->AddQuadraticBezier(D2D1::QuadraticBezierSegment(D2D1::Point2F(x1, y1), D2D1::Point2F(x2, y2)));
+
+			//Update current point
+			current_x = x2;
+			current_y = y2;
+			last_ctrl_x = x1;
+			last_ctrl_y = y1;
 		} else if (cmd == L'C') {
 			float x1 = 0.0, y1 = 0.0, x2 = 0.0, y2 = 0.0, x3 = 0.0, y3 = 0.0;
 			ws >> x1 >> y1 >> x2 >> y2 >> x3 >> y3;
