@@ -134,7 +134,10 @@ bool build_transform_matrix(const std::wstring_view& transformStr, D2D1_MATRIX_3
 		return false;
 	}
 
-	for (const auto& f : functions) {
+	//Transformation functions are applied in reverse order
+	for (auto it = functions.rbegin(); it != functions.rend(); ++it) {
+		const auto& f = *it;
+
 		if (f.name == L"translate") {
 			if (f.values.size() == 1) {
 				outMatrix = outMatrix * D2D1::Matrix3x2F::Translation(f.values[0], 0.0f);

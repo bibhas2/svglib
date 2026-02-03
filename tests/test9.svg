@@ -1,0 +1,18 @@
+<svg version="1.1" width="600" height="600" xmlns="http://www.w3.org/2000/svg">
+  <!-- 
+  Test for negative scaling.
+  -->
+
+<!-- Original -->
+<path d="M0.499836 65.9999 420.5 65.9999 420.5 0.499836 551.5 131.5 420.5 262.5 420.5 197 0.499836 197Z" 
+  stroke="#042433" stroke-width="6" fill="#FFC000"/>
+
+<!-- Gets flipped horizontally wrt y axis and goes offscreen-->
+<path d="M0.499836 65.9999 420.5 65.9999 420.5 0.499836 551.5 131.5 420.5 262.5 420.5 197 0.499836 197Z" 
+  stroke="#042433" stroke-width="6" fill="#07ffa0" transform="scale(-1 1)"/>
+  
+<!-- Flipped and translated back onscreen. But uses negative X translation. -->
+<path d="M0.499836 65.9999 420.5 65.9999 420.5 0.499836 551.5 131.5 420.5 262.5 420.5 197 0.499836 197Z" 
+  stroke="#042433" stroke-width="6" fill="#d607ff" transform="scale(-1 1) translate(-551 220)"/>
+
+ </svg>
