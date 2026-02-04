@@ -77,9 +77,17 @@ static bool get_transform_functions(const std::wstring_view& source, std::vector
 		}
 
 		std::wstring_view values = source.substr(start, pos - start);
+		std::wstringstream ws;
 
-		std::wstring value_text(values);
-		std::wstringstream ws(value_text);
+		//Replace comma with spaces
+		for (wchar_t ch : values) {
+			if (ch == L',') {
+				ws << L' ';
+			} else {
+				ws << ch;
+			}
+		}
+
 		float v;
 
 		while (ws >> v) {
