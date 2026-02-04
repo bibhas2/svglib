@@ -198,16 +198,13 @@ bool build_transform_matrix(const std::wstring_view& transformStr, D2D1_MATRIX_3
 			}
 		} else if (f.name == L"matrix") {
 			if (f.values.size() == 6) {
-				outMatrix = outMatrix * D2D1::Matrix3x2F::Scale(f.values[0], f.values[3]);
-				outMatrix = outMatrix * D2D1::Matrix3x2F::Skew(f.values[1], f.values[2]);
-				outMatrix = outMatrix * D2D1::Matrix3x2F::Translation(f.values[4], f.values[5]);
-
-				/*D2D1_MATRIX_3X2_F m = D2D1::Matrix3x2F(
+				D2D1_MATRIX_3X2_F m = D2D1::Matrix3x2F(
 					f.values[0], f.values[1],
 					f.values[2], f.values[3],
 					f.values[4], f.values[5]
 				);
-				outMatrix = outMatrix * m;*/
+
+				outMatrix = outMatrix * m;
 			}
 		}
 		else if (f.name == L"skew") {
@@ -553,6 +550,9 @@ bool SVGUtil::init(HWND _wnd)
 	namedColors[L"pink"] = D2D1::ColorF::Pink;
 	namedColors[L"yellow"] = D2D1::ColorF::Yellow;
 	namedColors[L"brown"] = D2D1::ColorF::Brown;
+	namedColors[L"grey"] = D2D1::ColorF::Gray;
+	namedColors[L"gray"] = D2D1::ColorF::Gray;
+	namedColors[L"teal"] = D2D1::ColorF::Teal;
 
 	return true;
 }
