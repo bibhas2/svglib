@@ -417,12 +417,9 @@ void SVGPathElement::buildPath(ID2D1Factory* pFactory, const std::wstring_view& 
 
 void SVGPathElement::render(ID2D1DeviceContext* pContext) {
 	if (fillBrush) {
-		OutputDebugStringW(L"FillGeometry\n");
 		pContext->FillGeometry(pathGeometry, fillBrush);
 	}
 	if (strokeBrush) {
-		OutputDebugStringW(L"DrawGeometry\n");
-
 		pContext->DrawGeometry(pathGeometry, strokeBrush, strokeWidth);
 	}
 }
@@ -643,6 +640,52 @@ bool get_attribute(IXmlReader* pReader, const wchar_t* attr_name, float& attr_va
 	return swscanf_s(pwszValue, L"%f", &attr_value) == 1;
 }
 
+bool apply_viewbox(std::shared_ptr<SVGGraphicsElement> e, IXmlReader* pReader) {
+	//Default viewport width and height
+	float width = 300.0f, height = 150.0f;
+	float vb_x = 0.0f, vb_y = 0.0f, vb_width = width, vb_height = height;
+
+	//Read width and height attributes
+	get_attribute(pReader, L"width", width);
+	get_attribute(pReader, L"height", height);
+
+	std::wstring_view viewBoxStr;
+	std::wstringstream ws;
+
+	if (get_attribute(pReader, L"viewBox", viewBoxStr)) {
+		//Replace comma with spaces
+		for (wchar_t ch : viewBoxStr) {
+			if (ch == L',') {
+				ch = L' ';
+			}
+
+			ws << ch;
+		}
+
+		//Parse viewBox attribute.
+		//For now expect all four values to be present.
+		if (!(ws >> vb_x >> vb_y >> vb_width >> vb_height)) {
+			return false;
+		}
+
+		if (vb_width <= 0.0f || vb_height <= 0.0f) {
+			return false;
+		}
+
+		//Calculate scale factors
+		float scale_x = width / vb_width;
+		float scale_y = height / vb_height;
+
+		//Create transform matrix
+		D2D1_MATRIX_3X2_F viewboxTransform = D2D1::Matrix3x2F::Translation(-vb_x, -vb_y) *
+			D2D1::Matrix3x2F::Scale(scale_x, scale_y);
+		e->combinedTransform = viewboxTransform;
+	}
+	else {
+		return false;
+	}
+}
+
 bool SVGUtil::parse(const wchar_t* fileName) {
 	CComPtr<IXmlReader> pReader;
 
@@ -724,6 +767,8 @@ bool SVGUtil::parse(const wchar_t* fileName) {
 						new_element->combinedTransform = D2D1::Matrix3x2F::Translation(x, y);
 					}
 				}
+
+				apply_viewbox(new_element, pReader);
 			}
 			else if (element_name == L"rect") {
 				float x, y, width, height;
