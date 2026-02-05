@@ -577,6 +577,7 @@ void SVGTextElement::render(ID2D1DeviceContext* pContext) {
 			return;
 		}
 
+		//SVG spec requires x and y to specify the position of the text baseline
 		D2D1_POINT_2F  origin = D2D1::Point2F(
 			points[0], 
 			points[1] - lineMetrics.baseline);
@@ -1162,6 +1163,9 @@ bool SVGUtil::parse(const wchar_t* fileName) {
 			if (!SUCCEEDED(hr)) {
 				return false;
 			}
+
+			// To prevent wrapping and force it to stay on one line:
+			text_element->textLayout->SetWordWrapping(DWRITE_WORD_WRAPPING_NO_WRAP);
 		}
 		else if (nodeType == XmlNodeType_EndElement) {
 			std::wstring_view element_name;
