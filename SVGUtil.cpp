@@ -568,20 +568,20 @@ void SVGLineElement::render(ID2D1DeviceContext* pContext) {
 }
 
 void SVGTextElement::render(ID2D1DeviceContext* pContext) {
-	if (fillBrush && textFormat) {
-		D2D1_RECT_F layoutRect = D2D1::RectF(
-			points[0], 
-			points[1], 
-			pContext->GetSize().width, 
-			pContext->GetSize().height);
+	if (fillBrush && textFormat && textLayout) {
+		DWRITE_LINE_METRICS lineMetrics;
+		UINT32 lineCount = 0;
+		HRESULT hr = textLayout->GetLineMetrics(&lineMetrics, 1, &lineCount);
 
-		pContext->DrawText(
-			textContent.c_str(),
-			static_cast<UINT32>(textContent.length()),
-			textFormat,
-			layoutRect,
-			fillBrush
-		);
+		if (!SUCCEEDED(hr)) {
+			return;
+		}
+
+		D2D1_POINT_2F  origin = D2D1::Point2F(
+			points[0], 
+			points[1] - lineMetrics.baseline);
+
+		pContext->DrawTextLayout(origin, textLayout, fillBrush);
 	}
 }
 
@@ -1149,6 +1149,19 @@ bool SVGUtil::parse(const wchar_t* fileName) {
 			}
 
 			text_element->textContent.assign(pwszValue, len);
+
+			hr = pDWriteFactory->CreateTextLayout(
+				text_element->textContent.c_str(),           // The string to be laid out
+				text_element->textContent.size(),     // The length of the string
+				text_element->textFormat,    // The initial format (font, size, etc.)
+				pDeviceContext->GetSize().width,       // Maximum width of the layout box
+				pDeviceContext->GetSize().height,      // Maximum height of the layout box
+				&text_element->textLayout    // Output: the resulting IDWriteTextLayout
+			);
+
+			if (!SUCCEEDED(hr)) {
+				return false;
+			}
 		}
 		else if (nodeType == XmlNodeType_EndElement) {
 			std::wstring_view element_name;

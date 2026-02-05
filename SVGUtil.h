@@ -53,6 +53,7 @@ struct SVGPathElement : public SVGGraphicsElement {
 struct SVGTextElement : public SVGGraphicsElement {
 	std::wstring textContent;
 	CComPtr<IDWriteTextFormat> textFormat;
+	CComPtr<IDWriteTextLayout> textLayout;
 
 	void render(ID2D1DeviceContext* pContext) override;
 };
