@@ -19,6 +19,7 @@ struct SVGGraphicsElement {
 	std::vector<std::shared_ptr<SVGGraphicsElement>> children;
 	std::optional<D2D1_MATRIX_3X2_F> combinedTransform;
 	std::vector<float> points;
+	std::map<std::wstring, std::wstring> styles;
 
 	virtual void render_tree(ID2D1DeviceContext* pContext);
 	virtual void render(ID2D1DeviceContext* pContext) {};

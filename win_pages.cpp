@@ -45,9 +45,12 @@ public:
                 return;
 			}
 
-			svgUtil.parse(filename.c_str());
-
-			svgUtil.redraw();
+			if (svgUtil.parse(filename.c_str())) {
+				svgUtil.redraw();
+            }
+            else {
+				errorBox("Failed to open or parse the SVG file.");
+            }
         }
         else if (id == IDM_EXIT) {
             onClose();

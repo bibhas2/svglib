@@ -1,0 +1,14 @@
+<svg version="1.1" xmlns="http://www.w3.org/2000/svg">
+  <!-- 
+  Test style inheritence
+  -->
+
+  <g stroke-linecap="round" transform="translate(20 20)" style="stroke: #ff0000; fill: #31e048">
+    <rect x="10" y="0" width="40" height="40" style="stroke: #4b31e0; fill: #e05a31"/>
+    <rect x="10" y="30" width="40" height="40" fill-opacity="0.5"/>
+    <rect x="10" y="60" width="40" height="40" stroke-width="4" fill="none"/>
+  </g>
+
+    <!-- default stroke and fill-->
+    <rect x="30" y="140" width="40" height="40"/>
+  </svg>
