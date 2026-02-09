@@ -875,6 +875,78 @@ bool get_size_attribute(IXmlReader* pReader, ID2D1DeviceContext* pContext, const
 	return get_size_value(pContext, attr_value, size);
 }
 
+//A simple parser for inline CSS styles.
+void parse_css_style_string(std::wstring_view styleStr, std::map<std::wstring, std::wstring>& styles) {
+	std::vector<std::wstring_view> declarations = split_string(styleStr, L";");
+
+	for (const auto& decl : declarations) {
+		size_t colonPos = decl.find(L':');
+		if (colonPos != std::wstring_view::npos) {
+			std::wstring_view property = decl.substr(0, colonPos);
+			std::wstring_view value = decl.substr(colonPos + 1);
+			
+			ltrim_str(property);
+			ltrim_str(value);
+
+			if (!property.empty() && !value.empty()) {
+				styles[std::wstring(property)] = std::wstring(value);
+			}
+		}
+	}
+}
+
+//Normalizes style from both the "style" attribute and presentation attributes like "fill", "stroke", etc.
+void collect_styles(IXmlReader* pReader, std::shared_ptr<SVGGraphicsElement>& new_element) {
+	std::wstring_view style_str;
+
+	if (get_attribute(pReader, L"style", style_str)) {
+		parse_css_style_string(style_str, new_element->styles);
+	}
+
+	const wchar_t* presentation_attributes[] = {
+		L"fill", L"fill-opacity", L"stroke", L"stroke-width", L"font-family", L"font-size", L"font-weight", L"font-style"
+	};
+
+	for (const wchar_t* attr_name : presentation_attributes) {
+		std::wstring_view attr_value;
+
+		if (get_attribute(pReader, attr_name, attr_value)) {
+			new_element->styles[std::wstring(attr_name)] = std::wstring(attr_value);
+		}
+	}
+}
+
+static bool get_style_computed(const std::vector<std::shared_ptr<SVGGraphicsElement>>& parent_stack, const std::shared_ptr<SVGGraphicsElement>& element, const std::wstring& style_name, std::wstring& style_value) {
+	auto it = element->styles.find(style_name);
+
+	if (it != element->styles.end()) {
+		style_value = it->second;
+
+		return true;
+	}
+
+	//If the style is not defined on the current element, check the parent elements
+	//Loop through parent stack from top to bottom (for a vector: back to front)
+	for (auto it = parent_stack.rbegin(); it != parent_stack.rend(); ++it) {
+		const auto& parent = *it;
+		auto styleIt = parent->styles.find(style_name);
+
+		if (styleIt != parent->styles.end()) {
+			style_value = styleIt->second;
+
+			return true;
+		}
+	}
+
+	return false;
+}
+
+static void get_style_computed(const std::vector<std::shared_ptr<SVGGraphicsElement>>& parent_stack, const std::shared_ptr<SVGGraphicsElement>& element, const std::wstring& style_name, std::wstring& style_value, const std::wstring& default_value) {
+	if (!get_style_computed(parent_stack, element, style_name, style_value)) {
+		style_value = default_value;
+	}
+}
+
 bool apply_viewbox(ID2D1DeviceContext* pContext, std::shared_ptr<SVGGraphicsElement> e, IXmlReader* pReader) {
 	//Default viewport width and height
 	float width = 300.0f, height = 150.0f;
@@ -950,7 +1022,7 @@ bool SVGUtil::parse(const wchar_t* fileName) {
 	//Clear any existing root element
 	rootElement = nullptr;
 
-	std::stack<std::shared_ptr<SVGGraphicsElement>> parent_stack;
+	std::vector<std::shared_ptr<SVGGraphicsElement>> parent_stack;
 
 	while (true) {
 		XmlNodeType nodeType;
@@ -980,7 +1052,7 @@ bool SVGUtil::parse(const wchar_t* fileName) {
 			std::shared_ptr<SVGGraphicsElement> new_element;
 
 			if (!parent_stack.empty()) {
-				parent_element = parent_stack.top();
+				parent_element = parent_stack.back();
 			}
 
 			if (element_name == L"svg") {
@@ -1124,6 +1196,7 @@ bool SVGUtil::parse(const wchar_t* fileName) {
 			if (new_element) {
 				new_element->tagName = element_name;
 
+				//Transform is not inherited
 				if (get_attribute(pReader, L"transform", attr_value)) {
 					D2D1_MATRIX_3X2_F trans = D2D1::Matrix3x2F::Identity();
 
@@ -1138,86 +1211,70 @@ bool SVGUtil::parse(const wchar_t* fileName) {
 					}
 				}
 
+				collect_styles(pReader, new_element);
+
+				std::wstring style_value;
+
 				//Set brushes
-				if (get_attribute(pReader, L"stroke", attr_value)) {
-					if (attr_value == L"none") {
-						new_element->strokeBrush = nullptr;
-					}
-					else {
-						float r, g, b, a;
+				get_style_computed(parent_stack, new_element, L"stroke", style_value, L"none");
 
-						if (get_rgba(attr_value, r, g, b, a)) {
-							CComPtr<ID2D1SolidColorBrush> brush;
-							hr = pDeviceContext->CreateSolidColorBrush(
-								D2D1::ColorF(r, g, b, a),
-								&brush
-							);
-
-							if (SUCCEEDED(hr)) {
-								new_element->strokeBrush = brush;
-							}
-						}
-					}
-				} else {
-					if (parent_element) {
-						//Inherit stroke brush from parent
-						new_element->strokeBrush = parent_element->strokeBrush;
-					}
-				}
-
-				//Get fill opacity
-				float fillOpacity;
-
-				//TBD: Read this as a plain float value and not size attribute
-				if (get_size_attribute(pReader, pDeviceContext, L"fill-opacity", fillOpacity)) {
-					new_element->fillOpacity = fillOpacity;
+				if (style_value == L"none") {
+					new_element->strokeBrush = nullptr;
 				}
 				else {
-					if (parent_element) {
-						//Inherit fill opacity from parent
-						new_element->fillOpacity = parent_element->fillOpacity;
+					float r, g, b, a;
+
+					if (get_rgba(style_value, r, g, b, a)) {
+						CComPtr<ID2D1SolidColorBrush> brush;
+
+						hr = pDeviceContext->CreateSolidColorBrush(
+							D2D1::ColorF(r, g, b, a),
+							&brush
+						);
+
+						if (SUCCEEDED(hr)) {
+							new_element->strokeBrush = brush;
+						}
+					}
+				}
+				
+				//Get fill opacity
+				if (get_style_computed(parent_stack, new_element, L"fill-opacity", style_value)) {
+					float fillOpacity;
+
+					//TBD: We read this as a size, even though only % and plain numbers are allowed.
+					if (get_size_value(pDeviceContext, style_value, fillOpacity)) {
+						new_element->fillOpacity = fillOpacity;
 					}
 				}
 
-				if (get_attribute(pReader, L"fill", attr_value)) {
-					if (attr_value == L"none") {
-						new_element->fillBrush = nullptr;
-					}
-					else {
-						float r, g, b, a;
+				get_style_computed(parent_stack, new_element, L"fill", style_value, L"black");
 
-						if (get_rgba(attr_value, r, g, b, a)) {
-							CComPtr<ID2D1SolidColorBrush> brush;
+				if (style_value == L"none") {
+					new_element->fillBrush = nullptr;
+				}
+				else {
+					float r, g, b, a;
 
-							hr = pDeviceContext->CreateSolidColorBrush(
-								D2D1::ColorF(r, g, b, a * new_element->fillOpacity),
-								&brush
-							);
-							if (SUCCEEDED(hr)) {
-								new_element->fillBrush = brush;
-							}
+					if (get_rgba(style_value, r, g, b, a)) {
+						CComPtr<ID2D1SolidColorBrush> brush;
+
+						hr = pDeviceContext->CreateSolidColorBrush(
+							D2D1::ColorF(r, g, b, a * new_element->fillOpacity),
+							&brush
+						);
+						if (SUCCEEDED(hr)) {
+							new_element->fillBrush = brush;
 						}
-					}
-				} else {
-					if (parent_element) {
-						//Inherit fill brush from parent
-						new_element->fillBrush = parent_element->fillBrush;
 					}
 				}
 
 				//Get stroke width
 				float strokeWidth;
 
-				if (get_size_attribute(pReader, pDeviceContext, L"stroke-width", strokeWidth)) {
+				if (get_style_computed(parent_stack, new_element, L"stroke-width", style_value) && 
+					get_size_value(pDeviceContext, style_value, strokeWidth)) {
 					new_element->strokeWidth = strokeWidth;
-				} else {
-					if (parent_element) {
-						//Inherit stroke width from parent
-						new_element->strokeWidth = parent_element->strokeWidth;
-					}
-					else {
-						new_element->strokeWidth = 1.0f; //Default stroke width
-					}
 				}
 
 				if (parent_element) {
@@ -1236,7 +1293,7 @@ bool SVGUtil::parse(const wchar_t* fileName) {
 			{
 				//Push the new element onto the stack
 				//This may be null if the element is not supported
-				parent_stack.push(new_element);
+				parent_stack.push_back(new_element);
 			}
 		}
 		else if (nodeType == XmlNodeType_Text) {
@@ -1244,7 +1301,7 @@ bool SVGUtil::parse(const wchar_t* fileName) {
 				return false;
 			}
 
-			std::shared_ptr<SVGGraphicsElement> parent_element = parent_stack.top();
+			std::shared_ptr<SVGGraphicsElement> parent_element = parent_stack.back();
 
 			//If the parent is a text then cast it to SVGTextElement
 			if (!parent_element || parent_element->tagName != L"text") {
@@ -1291,13 +1348,12 @@ bool SVGUtil::parse(const wchar_t* fileName) {
 			OutputDebugStringW(L"\n");
 
 			if (!parent_stack.empty()) {
-				parent_stack.pop();
+				parent_stack.pop_back();
 			}
 		}
 	}
 
-	//If we reach here, no <svg> element was found
-	return false;
+	return true;
 }
 
 void SVGUtil::redraw()
