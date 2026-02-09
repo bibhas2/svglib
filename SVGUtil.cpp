@@ -1239,15 +1239,16 @@ bool SVGUtil::parse(const wchar_t* fileName) {
 				}
 				
 				//Get fill opacity
-				if (get_style_computed(parent_stack, new_element, L"fill-opacity", style_value)) {
-					float fillOpacity;
+				//TBD: We read this as a size, even though only % and plain numbers are allowed.
+				float fillOpacity = 0.0f;
 
-					//TBD: We read this as a size, even though only % and plain numbers are allowed.
-					if (get_size_value(pDeviceContext, style_value, fillOpacity)) {
-						new_element->fillOpacity = fillOpacity;
-					}
+				if (get_style_computed(parent_stack, new_element, L"fill-opacity", style_value) &&
+					get_size_value(pDeviceContext, style_value, fillOpacity)) {
+					
+					new_element->fillOpacity = fillOpacity;
 				}
 
+				//Get fill
 				get_style_computed(parent_stack, new_element, L"fill", style_value, L"black");
 
 				if (style_value == L"none") {
