@@ -194,7 +194,7 @@ void SVGGraphicsElement::render_tree(ID2D1DeviceContext* pContext) {
 	}
 }
 
-CComPtr<IDWriteTextFormat> SVGUtil::build_text_format(IDWriteFactory* pDWriteFactory, std::wstring_view family, std::wstring_view weight, std::wstring_view style, float size) {
+CComPtr<IDWriteTextFormat> build_text_format(IDWriteFactory* pDWriteFactory, std::wstring_view family, std::wstring_view weight, std::wstring_view style, float size) {
 	CComPtr<IDWriteTextFormat> textFormat;
 	//Split the family string by commas and try to find the first installed font
 	auto families = split_string(family, L",");
@@ -258,7 +258,7 @@ CComPtr<IDWriteTextFormat> SVGUtil::build_text_format(IDWriteFactory* pDWriteFac
 		}
 	}
 
-	return defaultTextFormat;
+	return nullptr;
 }
 
 bool build_transform_matrix(const std::wstring_view& transformStr, D2D1_MATRIX_3X2_F& outMatrix) {
@@ -1072,6 +1072,31 @@ void SVGGElement::configure_presentation_style(const std::vector<std::shared_ptr
 	//Group element doesn't need to create any brushes.
 }
 
+void SVGTextElement::configure_presentation_style(const std::vector<std::shared_ptr<SVGGraphicsElement>>& parent_stack, ID2D1DeviceContext* pDeviceContext) {
+	SVGGraphicsElement::configure_presentation_style(parent_stack, pDeviceContext);
+
+	std::wstring fontFamily;
+	std::wstring fontWeight;
+	std::wstring fontStyle;
+	std::wstring fontSizeStr;
+	float fontSize = 12.0f;
+
+	get_style_computed(parent_stack, *this, L"font-family", fontFamily, L"Arial, sans-serif, Verdana");
+	get_style_computed(parent_stack, *this, L"font-weight", fontWeight, L"normal");
+	get_style_computed(parent_stack, *this, L"font-style", fontStyle, L"normal");
+	get_style_computed(parent_stack, *this, L"font-size", fontSizeStr, L"12");
+
+	get_size_value(pDeviceContext, fontSizeStr, fontSize);
+
+	this->textFormat = build_text_format(
+		pDWriteFactory,
+		fontFamily,
+		fontWeight,
+		fontStyle,
+		fontSize
+	);
+}
+
 bool SVGUtil::parse(const wchar_t* fileName) {
 	CComPtr<IXmlReader> pReader;
 
@@ -1241,30 +1266,7 @@ bool SVGUtil::parse(const wchar_t* fileName) {
 				text_element->points.push_back(x);
 				text_element->points.push_back(y);
 
-				std::wstring_view fontFamily = L"Arial, sans-serif, Verdana";
-				std::wstring_view fontWeight = L"normal";
-				std::wstring_view fontStyle = L"normal";
-				float fontSize = 12.0f;
-
-				if (get_attribute(pReader, L"font-family", attr_value)) {
-					fontFamily = attr_value;
-				}
-				if (get_attribute(pReader, L"font-weight", attr_value)) {
-					fontWeight = attr_value;
-				}
-				if (get_attribute(pReader, L"font-style", attr_value)) {
-					fontStyle = attr_value;
-				}
-
-				get_size_attribute(pReader, pDeviceContext, L"font-size", fontSize);
-
-				text_element->textFormat = build_text_format(
-					pDWriteFactory,
-					fontFamily,
-					fontWeight,
-					fontStyle,
-					fontSize
-				);
+				text_element->pDWriteFactory = pDWriteFactory;
 
 				new_element = text_element;
 			}

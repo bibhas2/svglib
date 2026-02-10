@@ -55,9 +55,11 @@ struct SVGPathElement : public SVGGraphicsElement {
 
 struct SVGTextElement : public SVGGraphicsElement {
 	std::wstring textContent;
+	CComPtr<IDWriteFactory> pDWriteFactory;
 	CComPtr<IDWriteTextFormat> textFormat;
 	CComPtr<IDWriteTextLayout> textLayout;
 
+	void configure_presentation_style(const std::vector<std::shared_ptr<SVGGraphicsElement>>& parent_stack, ID2D1DeviceContext* pDeviceContext) override;
 	void render(ID2D1DeviceContext* pContext) override;
 };
 
@@ -78,6 +80,5 @@ struct SVGUtil
 	void render();
 	void redraw();
 	bool parse(const wchar_t* fileName);
-	CComPtr<IDWriteTextFormat> build_text_format(IDWriteFactory* pDWriteFactory, std::wstring_view family, std::wstring_view weight, std::wstring_view style, float size);
 };
 
