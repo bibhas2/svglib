@@ -660,18 +660,10 @@ void SVGLineElement::render(ID2D1DeviceContext* pContext) {
 
 void SVGTextElement::render(ID2D1DeviceContext* pContext) {
 	if (fillBrush && textFormat && textLayout) {
-		DWRITE_LINE_METRICS lineMetrics;
-		UINT32 lineCount = 0;
-		HRESULT hr = textLayout->GetLineMetrics(&lineMetrics, 1, &lineCount);
-
-		if (!SUCCEEDED(hr)) {
-			return;
-		}
-
 		//SVG spec requires x and y to specify the position of the text baseline
 		D2D1_POINT_2F  origin = D2D1::Point2F(
 			points[0], 
-			points[1] - lineMetrics.baseline);
+			points[1] - baseline);
 
 		pContext->DrawTextLayout(origin, textLayout, fillBrush);
 	}
@@ -1351,6 +1343,32 @@ bool SVGUtil::parse(const wchar_t* fileName) {
 
 			// To prevent wrapping and force it to stay on one line:
 			text_element->textLayout->SetWordWrapping(DWRITE_WORD_WRAPPING_NO_WRAP);
+
+			//Get the font baseline
+			UINT32 lineCount = 0;
+
+			//First get the line count
+			hr = text_element->textLayout->GetLineMetrics(nullptr, 0, &lineCount);
+
+			if (!SUCCEEDED(hr) && hr != HRESULT_FROM_WIN32(ERROR_INSUFFICIENT_BUFFER)) {
+				return false;
+			}
+
+			if (lineCount == 0) {
+				//Nothing there
+				return false;
+			}
+
+			//Allocate memory for metrics
+			std::vector<DWRITE_LINE_METRICS> lineMetrics(lineCount);
+
+			hr = text_element->textLayout->GetLineMetrics(lineMetrics.data(), lineMetrics.size(), &lineCount);
+
+			if (!SUCCEEDED(hr)) {
+				return false;
+			}
+
+			text_element->baseline = lineMetrics[0].baseline;
 		}
 		else if (nodeType == XmlNodeType_EndElement) {
 			std::wstring_view element_name;

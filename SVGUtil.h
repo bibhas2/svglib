@@ -58,6 +58,7 @@ struct SVGTextElement : public SVGGraphicsElement {
 	CComPtr<IDWriteFactory> pDWriteFactory;
 	CComPtr<IDWriteTextFormat> textFormat;
 	CComPtr<IDWriteTextLayout> textLayout;
+	float baseline = 0.0f;
 
 	void configure_presentation_style(const std::vector<std::shared_ptr<SVGGraphicsElement>>& parent_stack, ID2D1DeviceContext* pDeviceContext) override;
 	void render(ID2D1DeviceContext* pContext) override;
