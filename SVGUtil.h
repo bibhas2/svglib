@@ -11,13 +11,13 @@
 #include <dwrite.h>
 
 struct SVGGraphicsElement {
-	std::wstring tagName;
+	std::wstring tag_name;
 	float strokeWidth = 1.0f;
 	float fillOpacity = 1.0f;
-	CComPtr<ID2D1SolidColorBrush> fillBrush;
-	CComPtr<ID2D1SolidColorBrush> strokeBrush;
+	CComPtr<ID2D1SolidColorBrush> fill_brush;
+	CComPtr<ID2D1SolidColorBrush> stroke_brush;
 	std::vector<std::shared_ptr<SVGGraphicsElement>> children;
-	std::optional<D2D1_MATRIX_3X2_F> combinedTransform;
+	std::optional<D2D1_MATRIX_3X2_F> combined_transform;
 	std::vector<float> points;
 	std::map<std::wstring, std::wstring> styles;
 
@@ -49,14 +49,14 @@ struct SVGLineElement : public SVGGraphicsElement {
 };
 
 struct SVGPathElement : public SVGGraphicsElement {
-	CComPtr<ID2D1PathGeometry> pathGeometry;
+	CComPtr<ID2D1PathGeometry> path_geometry;
 
 	void buildPath(ID2D1Factory* pFactory, const std::wstring_view& pathData);
 	void render(ID2D1DeviceContext* pContext) override;
 };
 
 struct SVGTextElement : public SVGGraphicsElement {
-	std::wstring textContent;
+	std::wstring text_content;
 	CComPtr<IDWriteFactory> pDWriteFactory;
 	CComPtr<IDWriteTextFormat> textFormat;
 	CComPtr<IDWriteTextLayout> textLayout;
@@ -76,7 +76,7 @@ struct SVGUtil
 	CComPtr<ID2D1SolidColorBrush> defaultFillBrush;
 	CComPtr<ID2D1SolidColorBrush> defaultStrokeBrush;
 	CComPtr<IDWriteTextFormat> defaultTextFormat;
-	std::shared_ptr<SVGGraphicsElement> rootElement;
+	std::shared_ptr<SVGGraphicsElement> root_element;
 
 	bool init(HWND wnd);
 	void resize();

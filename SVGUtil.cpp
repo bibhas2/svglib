@@ -191,17 +191,17 @@ static bool get_transform_functions(const std::wstring_view& source, std::vector
 
 void SVGGraphicsElement::render_tree(ID2D1DeviceContext* pContext) {
 	OutputDebugStringW(L"Rendering element: ");
-	OutputDebugStringW(tagName.c_str());
+	OutputDebugStringW(tag_name.c_str());
 	OutputDebugStringW(L"\n");
 
 	//Save the old transform
 	D2D1_MATRIX_3X2_F oldTransform;
 
-	if (combinedTransform) {
+	if (combined_transform) {
 		OutputDebugStringW(L"Applying transform\n");
 		pContext->GetTransform(&oldTransform);
 
-		auto totalTransform = combinedTransform.value() * oldTransform;
+		auto totalTransform = combined_transform.value() * oldTransform;
 
 		pContext->SetTransform(totalTransform);
 	}
@@ -213,7 +213,7 @@ void SVGGraphicsElement::render_tree(ID2D1DeviceContext* pContext) {
 		child->render_tree(pContext);
 	}
 
-	if (combinedTransform) {
+	if (combined_transform) {
 		OutputDebugStringW(L"Restoring transform\n");
 		pContext->SetTransform(oldTransform);
 	}
@@ -347,11 +347,11 @@ bool char_is_number(wchar_t ch) {
 }
 
 void SVGPathElement::buildPath(ID2D1Factory* pFactory, const std::wstring_view& pathData) {
-	pFactory->CreatePathGeometry(&pathGeometry);
+	pFactory->CreatePathGeometry(&path_geometry);
 
 	CComPtr<ID2D1GeometrySink> pSink;
 
-	pathGeometry->Open(&pSink);
+	path_geometry->Open(&pSink);
 
 	//SVG spec is very leinent on path syntax. White spaces are
 	//entirely optional. Numbers can either be separated by comma or spaces.
@@ -615,41 +615,41 @@ void SVGPathElement::buildPath(ID2D1Factory* pFactory, const std::wstring_view& 
 }
 
 void SVGPathElement::render(ID2D1DeviceContext* pContext) {
-	if (fillBrush) {
-		pContext->FillGeometry(pathGeometry, fillBrush);
+	if (fill_brush) {
+		pContext->FillGeometry(path_geometry, fill_brush);
 	}
-	if (strokeBrush) {
-		pContext->DrawGeometry(pathGeometry, strokeBrush, strokeWidth);
+	if (stroke_brush) {
+		pContext->DrawGeometry(path_geometry, stroke_brush, strokeWidth);
 	}
 }
 
 void SVGRectElement::render(ID2D1DeviceContext* pContext) {
-	if (fillBrush) {
+	if (fill_brush) {
 		pContext->FillRectangle(
 			D2D1::RectF(points[0], points[1], points[0] + points[2], points[1] + points[3]),
-			fillBrush
+			fill_brush
 		);
 	}
-	if (strokeBrush) {
+	if (stroke_brush) {
 		pContext->DrawRectangle(
 			D2D1::RectF(points[0], points[1], points[0] + points[2], points[1] + points[3]),
-			strokeBrush,
+			stroke_brush,
 			strokeWidth
 		);
 	}
 }
 
 void SVGCircleElement::render(ID2D1DeviceContext* pContext) {
-	if (fillBrush) {
+	if (fill_brush) {
 		pContext->FillEllipse(
 			D2D1::Ellipse(D2D1::Point2F(points[0], points[1]), points[2], points[2]),
-			fillBrush
+			fill_brush
 		);
 	}
-	if (strokeBrush) {
+	if (stroke_brush) {
 		pContext->DrawEllipse(
 			D2D1::Ellipse(D2D1::Point2F(points[0], points[1]), points[2], points[2]),
-			strokeBrush,
+			stroke_brush,
 			strokeWidth
 		);
 	}
@@ -657,40 +657,40 @@ void SVGCircleElement::render(ID2D1DeviceContext* pContext) {
 
 //Render SVGEllipseElement
 void SVGEllipseElement::render(ID2D1DeviceContext* pContext) {
-	if (fillBrush) {
+	if (fill_brush) {
 		pContext->FillEllipse(
 			D2D1::Ellipse(D2D1::Point2F(points[0], points[1]), points[2], points[3]),
-			fillBrush
+			fill_brush
 		);
 	}
-	if (strokeBrush) {
+	if (stroke_brush) {
 		pContext->DrawEllipse(
 			D2D1::Ellipse(D2D1::Point2F(points[0], points[1]), points[2], points[3]),
-			strokeBrush,
+			stroke_brush,
 			strokeWidth
 		);
 	}
 }
 
 void SVGLineElement::render(ID2D1DeviceContext* pContext) {
-	if (strokeBrush) {
+	if (stroke_brush) {
 		pContext->DrawLine(
 			D2D1::Point2F(points[0], points[1]),
 			D2D1::Point2F(points[2], points[3]),
-			strokeBrush,
+			stroke_brush,
 			strokeWidth
 		);
 	}
 }
 
 void SVGTextElement::render(ID2D1DeviceContext* pContext) {
-	if (fillBrush && textFormat && textLayout) {
+	if (fill_brush && textFormat && textLayout) {
 		//SVG spec requires x and y to specify the position of the text baseline
 		D2D1_POINT_2F  origin = D2D1::Point2F(
 			points[0], 
 			points[1] - baseline);
 
-		pContext->DrawTextLayout(origin, textLayout, fillBrush);
+		pContext->DrawTextLayout(origin, textLayout, fill_brush);
 	}
 }
 
@@ -790,9 +790,9 @@ void SVGUtil::render()
 	pDeviceContext->BeginDraw();
 	pDeviceContext->Clear(D2D1::ColorF(D2D1::ColorF::White));
 
-	if (rootElement) {
+	if (root_element) {
 		//Render the SVG element tree
-		rootElement->render_tree(pDeviceContext);
+		root_element->render_tree(pDeviceContext);
 	}
 
 	pDeviceContext->EndDraw();
@@ -1008,7 +1008,7 @@ bool apply_viewbox(ID2D1DeviceContext* pContext, std::shared_ptr<SVGGraphicsElem
 		//Create transform matrix
 		D2D1_MATRIX_3X2_F viewboxTransform = D2D1::Matrix3x2F::Translation(-vb_x, -vb_y) *
 			D2D1::Matrix3x2F::Scale(scale, scale);
-		e->combinedTransform = viewboxTransform;
+		e->combined_transform = viewboxTransform;
 
 		return true;
 	}
@@ -1025,7 +1025,7 @@ void SVGGraphicsElement::configure_presentation_style(const std::vector<std::sha
 	get_style_computed(parent_stack, L"stroke", style_value, L"none");
 
 	if (style_value == L"none") {
-		this->strokeBrush = nullptr;
+		this->stroke_brush = nullptr;
 	}
 	else {
 		float r, g, b, a;
@@ -1039,7 +1039,7 @@ void SVGGraphicsElement::configure_presentation_style(const std::vector<std::sha
 			);
 
 			if (SUCCEEDED(hr)) {
-				this->strokeBrush = brush;
+				this->stroke_brush = brush;
 			}
 		}
 	}
@@ -1058,7 +1058,7 @@ void SVGGraphicsElement::configure_presentation_style(const std::vector<std::sha
 	get_style_computed(parent_stack, L"fill", style_value, L"black");
 
 	if (style_value == L"none") {
-		this->fillBrush = nullptr;
+		this->fill_brush = nullptr;
 	}
 	else {
 		float r, g, b, a;
@@ -1071,7 +1071,7 @@ void SVGGraphicsElement::configure_presentation_style(const std::vector<std::sha
 				&brush
 			);
 			if (SUCCEEDED(hr)) {
-				this->fillBrush = brush;
+				this->fill_brush = brush;
 			}
 		}
 	}
@@ -1138,7 +1138,7 @@ bool SVGUtil::parse(const wchar_t* fileName) {
 	}
 
 	//Clear any existing root element
-	rootElement = nullptr;
+	root_element = nullptr;
 
 	std::vector<std::shared_ptr<SVGGraphicsElement>> parent_stack;
 
@@ -1177,13 +1177,13 @@ bool SVGUtil::parse(const wchar_t* fileName) {
 				new_element = std::make_shared<SVGGraphicsElement>();
 
 				//Set up default brushes
-				new_element->fillBrush = defaultFillBrush;
-				new_element->strokeBrush = nullptr;
+				new_element->fill_brush = defaultFillBrush;
+				new_element->stroke_brush = nullptr;
 
-				if (!rootElement)
+				if (!root_element)
 				{
 					//This is the root <svg> element
-					rootElement = new_element;
+					root_element = new_element;
 				}
 				else {
 					//Inner svg elements have some special treatment
@@ -1192,7 +1192,7 @@ bool SVGUtil::parse(const wchar_t* fileName) {
 					if (get_size_attribute(pReader, pDeviceContext, L"x", x) &&
 						get_size_attribute(pReader, pDeviceContext, L"y", y)) {
 						//Position the inner SVG element
-						new_element->combinedTransform = D2D1::Matrix3x2F::Translation(x, y);
+						new_element->combined_transform = D2D1::Matrix3x2F::Translation(x, y);
 					}
 				}
 
@@ -1289,20 +1289,20 @@ bool SVGUtil::parse(const wchar_t* fileName) {
 			}
 
 			if (new_element) {
-				new_element->tagName = element_name;
+				new_element->tag_name = element_name;
 
 				//Transform is not inherited
 				if (get_attribute(pReader, L"transform", attr_value)) {
 					D2D1_MATRIX_3X2_F trans = D2D1::Matrix3x2F::Identity();
 
 					//If the element already has a transform (like inner <svg>), combine them
-					if (new_element->combinedTransform)
+					if (new_element->combined_transform)
 					{
-						trans = new_element->combinedTransform.value();
+						trans = new_element->combined_transform.value();
 					}
 
 					if (build_transform_matrix(attr_value, trans)) {
-						new_element->combinedTransform = trans;
+						new_element->combined_transform = trans;
 					}
 				}
 
@@ -1313,7 +1313,7 @@ bool SVGUtil::parse(const wchar_t* fileName) {
 				if (parent_element) {
 					//Add the new element to its parent
 					OutputDebugStringW(L"Parent::Child: ");
-					OutputDebugStringW(parent_element->tagName.c_str());
+					OutputDebugStringW(parent_element->tag_name.c_str());
 					OutputDebugStringW(L"::");
 					OutputDebugStringW(element_name.data());
 					OutputDebugStringW(L"\n");
@@ -1337,7 +1337,7 @@ bool SVGUtil::parse(const wchar_t* fileName) {
 			std::shared_ptr<SVGGraphicsElement> parent_element = parent_stack.back();
 
 			//If the parent is a text then cast it to SVGTextElement
-			if (!parent_element || parent_element->tagName != L"text") {
+			if (!parent_element || parent_element->tag_name != L"text") {
 				continue; //Text nodes are only valid inside <text> elements
 			}
 
@@ -1359,15 +1359,15 @@ bool SVGUtil::parse(const wchar_t* fileName) {
 			if (style_value == L"normal") {
 				std::wstring_view source(pwszValue, len);
 
-				collapse_whitespace(source, text_element->textContent);
+				collapse_whitespace(source, text_element->text_content);
 			}
 			else {
-				text_element->textContent.assign(pwszValue, len);
+				text_element->text_content.assign(pwszValue, len);
 			}
 
 			hr = pDWriteFactory->CreateTextLayout(
-				text_element->textContent.c_str(),           // The string to be laid out
-				text_element->textContent.size(),     // The length of the string
+				text_element->text_content.c_str(),           // The string to be laid out
+				text_element->text_content.size(),     // The length of the string
 				text_element->textFormat,    // The initial format (font, size, etc.)
 				pDeviceContext->GetSize().width,       // Maximum width of the layout box
 				pDeviceContext->GetSize().height,      // Maximum height of the layout box
