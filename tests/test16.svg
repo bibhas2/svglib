@@ -1,8 +1,20 @@
-<svg height="100" width="300" xmlns="http://www.w3.org/2000/svg">
+<svg height="300" width="300" xmlns="http://www.w3.org/2000/svg">
     <!-- Test text -->
-    <text x="10" y="30" fill="green" font-size="24">The text is fully visible </text>
+    <text x="10" y="30" fill="green" font-size="24">
+    
+    All   white spaces      
+    are collapsed.
+    
+     </text>
 
     <g style="font-weight: bold; font-style: italic">
-        <text x="10" y="80" fill="red" style="font-size: 28px">The text is also fully visible </text>
+        <text x="10" y="80" fill="red" style="font-size: 28px">Test style inheritance </text>
     </g>
+
+    <text x="10" y="100" fill="blue" font-size="20" style="white-space: pre;font-family: courier new">{
+    
+    All   white spaces      
+    are preserved.
+    
+}</text>
 </svg>

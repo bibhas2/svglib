@@ -20,6 +20,31 @@ static void ltrim_str(std::wstring_view& source) {
 	}
 }
 
+//Collapse white spaces as per CSS and HTML spec
+static void collapse_whitespace(std::wstring_view& source, std::wstring& result) {
+	result.clear();
+
+	ltrim_str(source);
+
+	wchar_t last_ch = 0;
+	std::wstring_view white_spaces(L" \t\r\n");
+
+	for (wchar_t ch : source) {
+		if (white_spaces.find(ch) != std::wstring_view::npos) {
+			//Normalize all white spaces
+			ch = L' ';
+		}
+
+		if (ch == last_ch) {
+			//Skip consecutive what spaces
+			continue;
+		}
+
+		result.push_back(ch);
+		last_ch = ch;
+	}
+}
+
 std::vector<std::wstring_view>
 static split_string(std::wstring_view source, std::wstring_view separator) {
 	std::vector<std::wstring_view> list;
@@ -38,7 +63,7 @@ static split_string(std::wstring_view source, std::wstring_view separator) {
 
 bool get_rgba(std::wstring_view source, float& r, float& g, float& b, float& a) {
 	//Initialize named colors
-	std::map<std::wstring, UINT32> namedColors = {
+	static std::map<std::wstring, UINT32> namedColors = {
 		{L"black", D2D1::ColorF::Black},
 		{L"white", D2D1::ColorF::White},
 		{L"red", D2D1::ColorF::Red},
@@ -912,10 +937,10 @@ void collect_styles(IXmlReader* pReader, std::shared_ptr<SVGGraphicsElement>& ne
 	}
 }
 
-static bool get_style_computed(const std::vector<std::shared_ptr<SVGGraphicsElement>>& parent_stack, const SVGGraphicsElement& element, const std::wstring& style_name, std::wstring& style_value) {
-	auto it = element.styles.find(style_name);
+bool SVGGraphicsElement::get_style_computed(const std::vector<std::shared_ptr<SVGGraphicsElement>>& parent_stack, const std::wstring& style_name, std::wstring& style_value) {
+	auto it = styles.find(style_name);
 
-	if (it != element.styles.end()) {
+	if (it != styles.end()) {
 		style_value = it->second;
 
 		return true;
@@ -937,8 +962,8 @@ static bool get_style_computed(const std::vector<std::shared_ptr<SVGGraphicsElem
 	return false;
 }
 
-static void get_style_computed(const std::vector<std::shared_ptr<SVGGraphicsElement>>& parent_stack, const SVGGraphicsElement& element, const std::wstring& style_name, std::wstring& style_value, const std::wstring& default_value) {
-	if (!get_style_computed(parent_stack, element, style_name, style_value)) {
+void SVGGraphicsElement::get_style_computed(const std::vector<std::shared_ptr<SVGGraphicsElement>>& parent_stack, const std::wstring& style_name, std::wstring& style_value, const std::wstring& default_value) {
+	if (!get_style_computed(parent_stack, style_name, style_value)) {
 		style_value = default_value;
 	}
 }
@@ -997,7 +1022,7 @@ void SVGGraphicsElement::configure_presentation_style(const std::vector<std::sha
 	HRESULT hr = S_OK;
 
 	//Set brushes
-	get_style_computed(parent_stack, *this, L"stroke", style_value, L"none");
+	get_style_computed(parent_stack, L"stroke", style_value, L"none");
 
 	if (style_value == L"none") {
 		this->strokeBrush = nullptr;
@@ -1023,14 +1048,14 @@ void SVGGraphicsElement::configure_presentation_style(const std::vector<std::sha
 	//TBD: We read this as a size, even though only % and plain numbers are allowed.
 	float fillOpacity = 0.0f;
 
-	if (get_style_computed(parent_stack, *this, L"fill-opacity", style_value) &&
+	if (get_style_computed(parent_stack, L"fill-opacity", style_value) &&
 		get_size_value(pDeviceContext, style_value, fillOpacity)) {
 
 		this->fillOpacity = fillOpacity;
 	}
 
 	//Get fill
-	get_style_computed(parent_stack, *this, L"fill", style_value, L"black");
+	get_style_computed(parent_stack, L"fill", style_value, L"black");
 
 	if (style_value == L"none") {
 		this->fillBrush = nullptr;
@@ -1054,7 +1079,7 @@ void SVGGraphicsElement::configure_presentation_style(const std::vector<std::sha
 	//Get stroke width
 	float strokeWidth;
 
-	if (get_style_computed(parent_stack, *this, L"stroke-width", style_value) &&
+	if (get_style_computed(parent_stack, L"stroke-width", style_value) &&
 		get_size_value(pDeviceContext, style_value, strokeWidth)) {
 		this->strokeWidth = strokeWidth;
 	}
@@ -1073,10 +1098,10 @@ void SVGTextElement::configure_presentation_style(const std::vector<std::shared_
 	std::wstring fontSizeStr;
 	float fontSize = 12.0f;
 
-	get_style_computed(parent_stack, *this, L"font-family", fontFamily, L"Arial, sans-serif, Verdana");
-	get_style_computed(parent_stack, *this, L"font-weight", fontWeight, L"normal");
-	get_style_computed(parent_stack, *this, L"font-style", fontStyle, L"normal");
-	get_style_computed(parent_stack, *this, L"font-size", fontSizeStr, L"12");
+	get_style_computed(parent_stack, L"font-family", fontFamily, L"Arial, sans-serif, Verdana");
+	get_style_computed(parent_stack, L"font-weight", fontWeight, L"normal");
+	get_style_computed(parent_stack, L"font-style", fontStyle, L"normal");
+	get_style_computed(parent_stack, L"font-size", fontSizeStr, L"12");
 
 	get_size_value(pDeviceContext, fontSizeStr, fontSize);
 
@@ -1326,7 +1351,19 @@ bool SVGUtil::parse(const wchar_t* fileName) {
 				return false;
 			}
 
-			text_element->textContent.assign(pwszValue, len);
+			//Collapse white space if needed.
+			std::wstring style_value;
+
+			text_element->get_style_computed(parent_stack, L"white-space", style_value, L"normal");
+
+			if (style_value == L"normal") {
+				std::wstring_view source(pwszValue, len);
+
+				collapse_whitespace(source, text_element->textContent);
+			}
+			else {
+				text_element->textContent.assign(pwszValue, len);
+			}
 
 			hr = pDWriteFactory->CreateTextLayout(
 				text_element->textContent.c_str(),           // The string to be laid out

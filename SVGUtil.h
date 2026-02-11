@@ -24,6 +24,8 @@ struct SVGGraphicsElement {
 	virtual void render_tree(ID2D1DeviceContext* pContext);
 	virtual void render(ID2D1DeviceContext* pContext) {};
 	virtual void configure_presentation_style(const std::vector<std::shared_ptr<SVGGraphicsElement>>& parent_stack, ID2D1DeviceContext* pDeviceContext);
+	bool get_style_computed(const std::vector<std::shared_ptr<SVGGraphicsElement>>& parent_stack, const std::wstring& style_name, std::wstring& style_value);
+	void get_style_computed(const std::vector<std::shared_ptr<SVGGraphicsElement>>& parent_stack, const std::wstring& style_name, std::wstring& style_value, const std::wstring& default_value);
 };
 
 struct SVGGElement : public SVGGraphicsElement {
