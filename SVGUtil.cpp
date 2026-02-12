@@ -619,7 +619,7 @@ void SVGPathElement::render(ID2D1DeviceContext* pContext) {
 		pContext->FillGeometry(path_geometry, fill_brush);
 	}
 	if (stroke_brush) {
-		pContext->DrawGeometry(path_geometry, stroke_brush, strokeWidth);
+		pContext->DrawGeometry(path_geometry, stroke_brush, stroke_width);
 	}
 }
 
@@ -634,7 +634,7 @@ void SVGRectElement::render(ID2D1DeviceContext* pContext) {
 		pContext->DrawRectangle(
 			D2D1::RectF(points[0], points[1], points[0] + points[2], points[1] + points[3]),
 			stroke_brush,
-			strokeWidth
+			stroke_width
 		);
 	}
 }
@@ -650,7 +650,7 @@ void SVGCircleElement::render(ID2D1DeviceContext* pContext) {
 		pContext->DrawEllipse(
 			D2D1::Ellipse(D2D1::Point2F(points[0], points[1]), points[2], points[2]),
 			stroke_brush,
-			strokeWidth
+			stroke_width
 		);
 	}
 }
@@ -667,7 +667,7 @@ void SVGEllipseElement::render(ID2D1DeviceContext* pContext) {
 		pContext->DrawEllipse(
 			D2D1::Ellipse(D2D1::Point2F(points[0], points[1]), points[2], points[3]),
 			stroke_brush,
-			strokeWidth
+			stroke_width
 		);
 	}
 }
@@ -678,7 +678,7 @@ void SVGLineElement::render(ID2D1DeviceContext* pContext) {
 			D2D1::Point2F(points[0], points[1]),
 			D2D1::Point2F(points[2], points[3]),
 			stroke_brush,
-			strokeWidth
+			stroke_width
 		);
 	}
 }
@@ -1067,7 +1067,7 @@ void SVGGraphicsElement::configure_presentation_style(const std::vector<std::sha
 	if (get_style_computed(parent_stack, L"fill-opacity", style_value) &&
 		get_size_value(pDeviceContext, style_value, opacity)) {
 
-		this->fillOpacity = opacity;
+		this->fill_opacity = opacity;
 	}
 
 	//Get fill
@@ -1083,7 +1083,7 @@ void SVGGraphicsElement::configure_presentation_style(const std::vector<std::sha
 			CComPtr<ID2D1SolidColorBrush> brush;
 
 			hr = pDeviceContext->CreateSolidColorBrush(
-				D2D1::ColorF(r, g, b, a * this->fillOpacity),
+				D2D1::ColorF(r, g, b, a * this->fill_opacity),
 				&brush
 			);
 			if (SUCCEEDED(hr)) {
@@ -1097,7 +1097,7 @@ void SVGGraphicsElement::configure_presentation_style(const std::vector<std::sha
 
 	if (get_style_computed(parent_stack, L"stroke-width", style_value) &&
 		get_size_value(pDeviceContext, style_value, w)) {
-		this->strokeWidth = w;
+		this->stroke_width = w;
 	}
 }
 
