@@ -1030,12 +1030,10 @@ void SVGGraphicsElement::configure_presentation_style(const std::vector<std::sha
 	HRESULT hr = S_OK;
 
 	//Set brushes
-	float opacity = 1.0f;
+	float stroke_opacity = 1.0f;
 
 	if (get_style_computed(parent_stack, L"stroke-opacity", style_value) &&
-		get_size_value(pDeviceContext, style_value, opacity)) {
-
-		this->stroke_opacity = opacity;
+		get_size_value(pDeviceContext, style_value, stroke_opacity)) {
 	}
 
 	get_style_computed(parent_stack, L"stroke", style_value, L"none");
@@ -1050,7 +1048,7 @@ void SVGGraphicsElement::configure_presentation_style(const std::vector<std::sha
 			CComPtr<ID2D1SolidColorBrush> brush;
 
 			hr = pDeviceContext->CreateSolidColorBrush(
-				D2D1::ColorF(r, g, b, a * this->stroke_opacity),
+				D2D1::ColorF(r, g, b, a * stroke_opacity),
 				&brush
 			);
 
@@ -1062,12 +1060,10 @@ void SVGGraphicsElement::configure_presentation_style(const std::vector<std::sha
 
 	//Get fill opacity
 	//TBD: We read this as a size, even though only % and plain numbers are allowed.
-	opacity = 1.0f;
+	float fill_opacity = 1.0f;
 
 	if (get_style_computed(parent_stack, L"fill-opacity", style_value) &&
-		get_size_value(pDeviceContext, style_value, opacity)) {
-
-		this->fill_opacity = opacity;
+		get_size_value(pDeviceContext, style_value, fill_opacity)) {
 	}
 
 	//Get fill
@@ -1083,7 +1079,7 @@ void SVGGraphicsElement::configure_presentation_style(const std::vector<std::sha
 			CComPtr<ID2D1SolidColorBrush> brush;
 
 			hr = pDeviceContext->CreateSolidColorBrush(
-				D2D1::ColorF(r, g, b, a * this->fill_opacity),
+				D2D1::ColorF(r, g, b, a * fill_opacity),
 				&brush
 			);
 			if (SUCCEEDED(hr)) {
