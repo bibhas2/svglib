@@ -220,7 +220,7 @@ void SVGGraphicsElement::render_tree(ID2D1DeviceContext* pContext) {
 }
 
 CComPtr<IDWriteTextFormat> build_text_format(IDWriteFactory* pDWriteFactory, std::wstring_view family, std::wstring_view weight, std::wstring_view style, float size) {
-	CComPtr<IDWriteTextFormat> textFormat;
+	CComPtr<IDWriteTextFormat> tfmt;
 	//Split the family string by commas and try to find the first installed font
 	auto families = split_string(family, L",");
 	DWRITE_FONT_WEIGHT fontWeight = DWRITE_FONT_WEIGHT_NORMAL;
@@ -276,10 +276,10 @@ CComPtr<IDWriteTextFormat> build_text_format(IDWriteFactory* pDWriteFactory, std
 				DWRITE_FONT_STRETCH_NORMAL,
 				size,
 				L"",
-				&textFormat);
+				&tfmt);
 
 		if (SUCCEEDED(hr)) {
-			return textFormat;
+			return tfmt;
 		}
 	}
 
@@ -686,13 +686,13 @@ void SVGLineElement::render(ID2D1DeviceContext* pContext) {
 }
 
 void SVGTextElement::render(ID2D1DeviceContext* pContext) {
-	if (fill_brush && textFormat && textLayout) {
+	if (fill_brush && text_format && text_layout) {
 		//SVG spec requires x and y to specify the position of the text baseline
 		D2D1_POINT_2F  origin = D2D1::Point2F(
 			points[0], 
 			points[1] - baseline);
 
-		pContext->DrawTextLayout(origin, textLayout, fill_brush);
+		pContext->DrawTextLayout(origin, text_layout, fill_brush);
 	}
 }
 
@@ -1173,7 +1173,7 @@ void SVGTextElement::configure_presentation_style(const std::vector<std::shared_
 
 	get_size_value(pDeviceContext, fontSizeStr, fontSize);
 
-	this->textFormat = build_text_format(
+	this->text_format = build_text_format(
 		pDWriteFactory,
 		fontFamily,
 		fontWeight,
@@ -1445,10 +1445,10 @@ bool SVGUtil::parse(const wchar_t* fileName) {
 			hr = pDWriteFactory->CreateTextLayout(
 				text_element->text_content.c_str(),           // The string to be laid out
 				text_element->text_content.size(),     // The length of the string
-				text_element->textFormat,    // The initial format (font, size, etc.)
+				text_element->text_format,    // The initial format (font, size, etc.)
 				pDeviceContext->GetSize().width,       // Maximum width of the layout box
 				pDeviceContext->GetSize().height,      // Maximum height of the layout box
-				&text_element->textLayout    // Output: the resulting IDWriteTextLayout
+				&text_element->text_layout    // Output: the resulting IDWriteTextLayout
 			);
 
 			if (!SUCCEEDED(hr)) {
@@ -1456,13 +1456,13 @@ bool SVGUtil::parse(const wchar_t* fileName) {
 			}
 
 			// To prevent wrapping and force it to stay on one line:
-			text_element->textLayout->SetWordWrapping(DWRITE_WORD_WRAPPING_NO_WRAP);
+			text_element->text_layout->SetWordWrapping(DWRITE_WORD_WRAPPING_NO_WRAP);
 
 			//Get the font baseline
 			UINT32 lineCount = 0;
 
 			//First get the line count
-			hr = text_element->textLayout->GetLineMetrics(nullptr, 0, &lineCount);
+			hr = text_element->text_layout->GetLineMetrics(nullptr, 0, &lineCount);
 
 			if (!SUCCEEDED(hr) && hr != HRESULT_FROM_WIN32(ERROR_INSUFFICIENT_BUFFER)) {
 				return false;
@@ -1476,7 +1476,7 @@ bool SVGUtil::parse(const wchar_t* fileName) {
 			//Allocate memory for metrics
 			std::vector<DWRITE_LINE_METRICS> lineMetrics(lineCount);
 
-			hr = text_element->textLayout->GetLineMetrics(lineMetrics.data(), lineMetrics.size(), &lineCount);
+			hr = text_element->text_layout->GetLineMetrics(lineMetrics.data(), lineMetrics.size(), &lineCount);
 
 			if (!SUCCEEDED(hr)) {
 				return false;
