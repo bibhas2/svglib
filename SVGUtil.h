@@ -28,6 +28,10 @@ struct SVGGraphicsElement {
 	void get_style_computed(const std::vector<std::shared_ptr<SVGGraphicsElement>>& parent_stack, const std::wstring& style_name, std::wstring& style_value, const std::wstring& default_value);
 };
 
+struct SVGDefsElement : public SVGGraphicsElement {
+	void render_tree(ID2D1DeviceContext* pContext) override;
+};
+
 struct SVGGElement : public SVGGraphicsElement {
 	void configure_presentation_style(const std::vector<std::shared_ptr<SVGGraphicsElement>>& parent_stack, ID2D1DeviceContext* pDeviceContext, ID2D1Factory* pD2DFactory) override;
 };
@@ -77,6 +81,9 @@ struct SVGUtil
 	CComPtr<ID2D1SolidColorBrush> defaultStrokeBrush;
 	CComPtr<IDWriteTextFormat> defaultTextFormat;
 	std::shared_ptr<SVGGraphicsElement> root_element;
+	std::map<std::wstring, std::shared_ptr<SVGGraphicsElement>> id_map;
+	std::map<std::wstring, std::shared_ptr<SVGGraphicsElement>> defs_map;
+
 
 	bool init(HWND wnd);
 	void resize();

@@ -1,0 +1,20 @@
+<svg version="1.1" xmlns="http://www.w3.org/2000/svg">
+  <!-- 
+  Test for no whitespace in path data.
+  Whitespace trailing.
+  -->
+  <defs>
+    <path id="myPath" d="M-10-10,10,-10,10 10,-10,10Z " stroke="#e03131" stroke-width="2" fill="none">
+    </path>
+  </defs>
+  <g stroke-linecap="round" transform="translate(20 20)">
+    <use href="#myPath"/>
+  </g>
+
+  <g stroke-linecap="round" transform="translate(20 60)">
+    <use href="#myPath"/>
+  </g>
+  <g stroke-linecap="round" transform="translate(20 100)">
+    <use href="#badRef"/>
+  </g>
+  </svg>

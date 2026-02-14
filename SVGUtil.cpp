@@ -20,6 +20,18 @@ static void ltrim_str(std::wstring_view& source) {
 	}
 }
 
+static void rtrim_str(std::wstring_view& source) {
+	size_t pos = source.find_last_not_of(L" \t\r\n");
+
+	if (pos == std::wstring_view::npos) {
+		//Empty out the string
+		source.remove_suffix(source.length());
+	}
+	else {
+		source.remove_suffix(source.length() - pos - 1);
+	}
+}
+
 //Collapse white spaces as per CSS and HTML spec
 static void collapse_whitespace(std::wstring_view& source, std::wstring& result) {
 	result.clear();
@@ -187,6 +199,10 @@ static bool get_transform_functions(const std::wstring_view& source, std::vector
 	}
 
 	return true;
+}
+
+//Defs tree doesn't render
+void SVGDefsElement::render_tree(ID2D1DeviceContext* pContext) {
 }
 
 void SVGGraphicsElement::render_tree(ID2D1DeviceContext* pContext) {
@@ -840,6 +856,50 @@ bool get_attribute(IXmlReader* pReader, const wchar_t* attr_name, std::wstring_v
 	return true;
 }
 
+//Gets the id reference from the href or xlink:href attribute.
+//Only reference by ID values like href="#someId" or href="url(#someId)"
+//are supported
+static bool get_href_id(IXmlReader* pReader, std::wstring_view& ref_id) {
+	std::wstring_view source;
+
+	if (!get_attribute(pReader, L"href", source)) {
+		return false;
+	}
+
+	if (source.find(L"url") != std::wstring_view::npos) {
+		size_t start = source.find(L"(");
+		size_t end = source.rfind(L")");
+
+		if (start == std::wstring_view::npos || end == std::wstring_view::npos) {
+			return false;
+		}
+
+		source = source.substr(start + 1, end - start - 1);
+	}
+
+	ltrim_str(source);
+	rtrim_str(source);
+
+	if (source.empty()) {
+		return false;
+	}
+
+	if (source[0] == L'#') {
+		source = source.substr(1);
+
+		if (source.empty()) {
+			return false;
+		}
+
+		ref_id = source;
+
+		return true;
+	}
+
+
+	return false;
+}
+
 bool get_size_value(ID2D1DeviceContext *pContext, const std::wstring_view& source, float& size) {
 
 	try {
@@ -1355,6 +1415,19 @@ bool SVGUtil::parse(const wchar_t* fileName) {
 
 				new_element = text_element;
 			}
+			else if (element_name == L"defs") {
+				new_element = std::make_shared<SVGDefsElement>();
+			}
+			else if (element_name == L"use") {
+				if (get_href_id(pReader, attr_value)) {
+					auto it = defs_map.find(std::wstring(attr_value));
+
+					if (it != defs_map.end()) {
+						//TBD: Clone the referred element
+						new_element = it->second;
+					}
+				}
+			}
 			else {
 				//Unknown element
 				new_element = std::make_shared<SVGGraphicsElement>();
@@ -1362,6 +1435,16 @@ bool SVGUtil::parse(const wchar_t* fileName) {
 
 			if (new_element) {
 				new_element->tag_name = element_name;
+
+				if (get_attribute(pReader, L"id", attr_value)) {
+					std::wstring id(attr_value);
+
+					id_map[id] = new_element;
+
+					if (parent_element && parent_element->tag_name == L"defs") {
+						defs_map[id] = new_element;
+					}
+				}
 
 				//Transform is not inherited
 				if (get_attribute(pReader, L"transform", attr_value)) {
@@ -1389,6 +1472,7 @@ bool SVGUtil::parse(const wchar_t* fileName) {
 					OutputDebugStringW(L"::");
 					OutputDebugStringW(element_name.data());
 					OutputDebugStringW(L"\n");
+
 					parent_element->children.push_back(new_element);
 				}
 			}
