@@ -362,7 +362,7 @@ bool char_is_number(wchar_t ch) {
 	return (ch >= 48 && ch <= 57) || (ch == L'.') || (ch == L'-');
 }
 
-void SVGPathElement::buildPath(ID2D1Factory* pD2DFactory, const std::wstring_view& pathData) {
+void SVGPathElement::build_path(ID2D1Factory* pD2DFactory, const std::wstring_view& pathData) {
 	pD2DFactory->CreatePathGeometry(&path_geometry);
 
 	CComPtr<ID2D1GeometrySink> pSink;
@@ -1028,7 +1028,7 @@ bool SVGGraphicsElement::get_style_computed(const std::vector<std::shared_ptr<SV
 		if (styleIt != parent->styles.end()) {
 			style_value = styleIt->second;
 
-return true;
+			return true;
 		}
 	}
 
@@ -1378,10 +1378,23 @@ bool SVGUtil::parse(const wchar_t* fileName) {
 				if (get_attribute(pReader, L"d", attr_value)) {
 					auto path_element = std::make_shared<SVGPathElement>();
 
-					path_element->buildPath(pD2DFactory, attr_value);
+					path_element->build_path(pD2DFactory, attr_value);
 					new_element = path_element;
 				}
-			} else if (element_name == L"group" || element_name == L"g") {
+			}
+			else if (element_name == L"polyline") {
+				if (get_attribute(pReader, L"points", attr_value)) {
+					auto polyline_element = std::make_shared<SVGPathElement>();
+					std::wstring path_data(L"M");
+					
+					path_data += attr_value;
+					
+					polyline_element->build_path(pD2DFactory, path_data);
+
+					new_element = polyline_element;
+				}
+			}
+			else if (element_name == L"group" || element_name == L"g") {
 				new_element = std::make_shared<SVGGElement>();
 			} else if (element_name == L"line") {
 				float x1, y1, x2, y2;

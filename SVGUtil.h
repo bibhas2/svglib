@@ -55,7 +55,7 @@ struct SVGLineElement : public SVGGraphicsElement {
 struct SVGPathElement : public SVGGraphicsElement {
 	CComPtr<ID2D1PathGeometry> path_geometry;
 
-	void buildPath(ID2D1Factory* pD2DFactory, const std::wstring_view& pathData);
+	void build_path(ID2D1Factory* pD2DFactory, const std::wstring_view& pathData);
 	void render(ID2D1DeviceContext* pContext) override;
 };
 
