@@ -1394,6 +1394,20 @@ bool SVGUtil::parse(const wchar_t* fileName) {
 					new_element = polyline_element;
 				}
 			}
+			else if (element_name == L"polygon") {
+				if (get_attribute(pReader, L"points", attr_value)) {
+					auto polygon_element = std::make_shared<SVGPathElement>();
+					std::wstring path_data(L"M");
+
+					path_data.append(attr_value);
+					path_data.append(L"Z");
+
+					polygon_element->build_path(pD2DFactory, path_data);
+
+					new_element = polygon_element;
+				}
+			}
+
 			else if (element_name == L"group" || element_name == L"g") {
 				new_element = std::make_shared<SVGGElement>();
 			} else if (element_name == L"line") {
