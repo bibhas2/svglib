@@ -1359,9 +1359,15 @@ bool SVGUtil::parse(const wchar_t* fileName) {
 			else if (element_name == L"ellipse") {
 				float cx, cy, rx, ry;
 
-				if (get_size_attribute(pReader, pDeviceContext, L"cx", cx) &&
-					get_size_attribute(pReader, pDeviceContext, L"cy", cy) &&
-					get_size_attribute(pReader, pDeviceContext, L"rx", rx) &&
+				if (!get_size_attribute(pReader, pDeviceContext, L"cx", cx)) {
+					cx = 0.0f;
+				}
+
+				if (!get_size_attribute(pReader, pDeviceContext, L"cy", cy)) {
+					cy = 0.0f;
+				}
+
+				if (get_size_attribute(pReader, pDeviceContext, L"rx", rx) &&
 					get_size_attribute(pReader, pDeviceContext, L"ry", ry)) {
 					
 					auto ellipse_element = std::make_shared<SVGEllipseElement>();
