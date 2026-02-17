@@ -641,18 +641,40 @@ void SVGPathElement::render(ID2D1DeviceContext* pContext) {
 
 void SVGRectElement::render(ID2D1DeviceContext* pContext) {
 	if (fill_brush) {
-		pContext->FillRectangle(
-			D2D1::RectF(points[0], points[1], points[0] + points[2], points[1] + points[3]),
-			fill_brush
-		);
+		if (points.size() == 4) {
+			pContext->FillRectangle(
+				D2D1::RectF(points[0], points[1], points[0] + points[2], points[1] + points[3]),
+				fill_brush
+			);
+		}
+		else if (points.size() == 6) {
+			pContext->FillRoundedRectangle(
+				D2D1::RoundedRect(
+					D2D1::RectF(points[0], points[1], points[0] + points[2], points[1] + points[3]),
+					points[4], points[5]),
+				fill_brush
+			);
+		}
 	}
 	if (stroke_brush) {
-		pContext->DrawRectangle(
-			D2D1::RectF(points[0], points[1], points[0] + points[2], points[1] + points[3]),
-			stroke_brush,
-			stroke_width,
-			stroke_style
-		);
+		if (points.size() == 4) {
+			pContext->DrawRectangle(
+				D2D1::RectF(points[0], points[1], points[0] + points[2], points[1] + points[3]),
+				stroke_brush,
+				stroke_width,
+				stroke_style
+			);
+		}
+		else if (points.size() == 6) {
+			pContext->DrawRoundedRectangle(
+				D2D1::RoundedRect(
+					D2D1::RectF(points[0], points[1], points[0] + points[2], points[1] + points[3]),
+					points[4], points[5]),
+				stroke_brush,
+				stroke_width,
+				stroke_style
+			);
+		}
 	}
 }
 
@@ -1327,7 +1349,7 @@ bool SVGUtil::parse(const wchar_t* fileName) {
 				apply_viewbox(pDeviceContext, new_element, pReader);
 			}
 			else if (element_name == L"rect") {
-				float x, y, width, height;
+				float x, y, width, height, rx, ry;
 				if (get_size_attribute(pReader, pDeviceContext, L"x", x) &&
 					get_size_attribute(pReader, pDeviceContext, L"y", y) &&
 					get_size_attribute(pReader, pDeviceContext, L"width", width) &&
@@ -1338,6 +1360,21 @@ bool SVGUtil::parse(const wchar_t* fileName) {
 					new_element->points.push_back(y);
 					new_element->points.push_back(width);
 					new_element->points.push_back(height);
+				}
+
+				bool has_rx = get_size_attribute(pReader, pDeviceContext, L"rx", rx);
+				bool has_ry = get_size_attribute(pReader, pDeviceContext, L"ry", ry);
+
+				if (has_rx || has_ry) {
+					if (!has_rx) {
+						rx = ry;
+					}
+					if (!has_ry) {
+						ry = rx;
+					}
+
+					new_element->points.push_back(rx);
+					new_element->points.push_back(ry);
 				}
 			}
 			else if (element_name == L"circle") {
