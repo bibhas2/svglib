@@ -235,6 +235,21 @@ void SVGGraphicsElement::render_tree(ID2D1DeviceContext* pContext) {
 	}
 }
 
+void SVGGraphicsElement::compute_bbox() {
+	if (children.empty()) {
+		return;
+	}
+
+	bbox = children[0]->bbox;
+
+	for (const auto& child : children) {
+		bbox.left = child->bbox.left < bbox.left ? child->bbox.left : bbox.left;
+		bbox.top = child->bbox.top < bbox.top ? child->bbox.top : bbox.top;
+		bbox.right = child->bbox.right > bbox.right ? child->bbox.right : bbox.right;
+		bbox.bottom = child->bbox.bottom > bbox.bottom ? child->bbox.bottom : bbox.bottom;
+	}
+}
+
 CComPtr<IDWriteTextFormat> build_text_format(IDWriteFactory* pDWriteFactory, std::wstring_view family, std::wstring_view weight, std::wstring_view style, float size) {
 	CComPtr<IDWriteTextFormat> tfmt;
 	//Split the family string by commas and try to find the first installed font
@@ -628,6 +643,20 @@ void SVGPathElement::build_path(ID2D1Factory* pD2DFactory, const std::wstring_vi
 	}
 
 	pSink->Close();
+
+}
+
+void SVGPathElement::compute_bbox() {
+	if (path_geometry) {
+		D2D1_RECT_F r;
+		HRESULT hr = path_geometry->GetBounds(
+			D2D1::IdentityMatrix(),
+			&r);
+
+		if (SUCCEEDED(hr)) {
+			bbox = r;
+		}
+	}
 }
 
 void SVGPathElement::render(ID2D1DeviceContext* pContext) {
@@ -637,6 +666,13 @@ void SVGPathElement::render(ID2D1DeviceContext* pContext) {
 	if (stroke_brush) {
 		pContext->DrawGeometry(path_geometry, stroke_brush, stroke_width, stroke_style);
 	}
+}
+
+void SVGRectElement::compute_bbox() {
+	bbox.left = points[0];
+	bbox.top = points[1];
+	bbox.right = points[0] + points[2];
+	bbox.bottom = points[1] + points[3];
 }
 
 void SVGRectElement::render(ID2D1DeviceContext* pContext) {
@@ -678,6 +714,13 @@ void SVGRectElement::render(ID2D1DeviceContext* pContext) {
 	}
 }
 
+void SVGCircleElement::compute_bbox() {
+	bbox.left = points[0] - points[2];
+	bbox.top = points[1] - points[2];
+	bbox.right = points[0] + points[2];
+	bbox.bottom = points[1] + points[2];
+}
+
 void SVGCircleElement::render(ID2D1DeviceContext* pContext) {
 	if (fill_brush) {
 		pContext->FillEllipse(
@@ -692,6 +735,13 @@ void SVGCircleElement::render(ID2D1DeviceContext* pContext) {
 			stroke_width
 		);
 	}
+}
+
+void SVGEllipseElement::compute_bbox() {
+	bbox.left = points[0] - points[2];
+	bbox.top = points[1] - points[3];
+	bbox.right = points[0] + points[2];
+	bbox.bottom = points[1] + points[3];
 }
 
 //Render SVGEllipseElement
@@ -711,6 +761,13 @@ void SVGEllipseElement::render(ID2D1DeviceContext* pContext) {
 	}
 }
 
+void SVGLineElement::compute_bbox() {
+	bbox.left = points[0] < points[2] ? points[0] : points[2];
+	bbox.top = points[1] < points[3] ? points[1] : points[3];
+	bbox.right = points[0] > points[2] ? points[0] : points[2];
+	bbox.bottom = points[1] > points[3] ? points[1] : points[3];
+}
+
 void SVGLineElement::render(ID2D1DeviceContext* pContext) {
 	if (stroke_brush) {
 		pContext->DrawLine(
@@ -720,6 +777,23 @@ void SVGLineElement::render(ID2D1DeviceContext* pContext) {
 			stroke_width,
 			stroke_style
 		);
+	}
+}
+
+void SVGTextElement::compute_bbox() {
+	if (text_layout) {
+		DWRITE_TEXT_METRICS m;
+
+		HRESULT hr = text_layout->GetMetrics(&m);
+
+		if (!SUCCEEDED(hr)) {
+			return;
+		}
+
+		bbox.left = points[0];
+		bbox.top = points[1];
+		bbox.right = bbox.left + m.width;
+		bbox.bottom = bbox.top + m.height;
 	}
 }
 
@@ -1554,6 +1628,10 @@ bool SVGUtil::parse(const wchar_t* fileName) {
 				//This may be null if the element is not supported
 				parent_stack.push_back(new_element);
 			}
+			else {
+				//This is the end of the element
+				new_element->compute_bbox();
+			}
 		}
 		else if (nodeType == XmlNodeType_Text) {
 			if (parent_stack.empty()) {
@@ -1650,6 +1728,10 @@ bool SVGUtil::parse(const wchar_t* fileName) {
 			OutputDebugStringW(L"\n");
 
 			if (!parent_stack.empty()) {
+				//Now that all children are added
+				//we can calculate bbox.
+				parent_stack.back()->compute_bbox();
+
 				parent_stack.pop_back();
 			}
 		}
