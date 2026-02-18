@@ -780,23 +780,6 @@ void SVGLineElement::render(ID2D1DeviceContext* pContext) {
 	}
 }
 
-void SVGTextElement::compute_bbox() {
-	if (text_layout) {
-		DWRITE_TEXT_METRICS m;
-
-		HRESULT hr = text_layout->GetMetrics(&m);
-
-		if (!SUCCEEDED(hr)) {
-			return;
-		}
-
-		bbox.left = points[0];
-		bbox.top = points[1];
-		bbox.right = bbox.left + m.width;
-		bbox.bottom = bbox.top + m.height;
-	}
-}
-
 void SVGTextElement::render(ID2D1DeviceContext* pContext) {
 	if (fill_brush && text_format && text_layout) {
 		//SVG spec requires x and y to specify the position of the text baseline
@@ -1715,6 +1698,11 @@ bool SVGUtil::parse(const wchar_t* fileName) {
 			}
 
 			text_element->baseline = lineMetrics[0].baseline;
+
+			text_element->bbox.left = text_element->points[0];
+			text_element->bbox.top = text_element->points[1];
+			text_element->bbox.right = text_element->bbox.left + pDeviceContext->GetSize().width;
+			text_element->bbox.bottom = text_element->bbox.top + pDeviceContext->GetSize().height;
 		}
 		else if (nodeType == XmlNodeType_EndElement) {
 			std::wstring_view element_name;
