@@ -741,17 +741,17 @@ bool SVGUtil::parse(const wchar_t* file_name, const SVGDevice& device, SVGImage&
 }
 
 // Render the loaded bitmap onto the window
-void SVGDevice::render(const SVGImage& image)
+void SVGUtil::render(const SVGDevice& device, const SVGImage& image)
 {
-	device_context->BeginDraw();
-	device_context->Clear(D2D1::ColorF(D2D1::ColorF::White));
+	device.device_context->BeginDraw();
+	device.device_context->Clear(D2D1::ColorF(D2D1::ColorF::White));
 
 	if (image.root_element) {
 		//Render the SVG element tree
-		image.root_element->render_tree(device_context);
+		image.root_element->render_tree(device.device_context);
 	}
 
-	device_context->EndDraw();
+	device.device_context->EndDraw();
 }
 
 void SVGDevice::redraw()

@@ -10,6 +10,19 @@
 #include <map>
 #include <dwrite.h>
 
+struct SVGDevice
+{
+	HWND wnd;
+	CComPtr<ID2D1Factory> d2d_factory;
+	CComPtr<IDWriteFactory> dwrite_factory;
+	CComPtr<ID2D1HwndRenderTarget> render_target;
+	CComPtr<ID2D1DeviceContext> device_context;
+
+	bool init(HWND wnd);
+	void resize();
+	void redraw();
+};
+
 struct SVGGraphicsElement {
 	std::wstring tag_name;
 	float stroke_width = 1.0f;
@@ -39,22 +52,9 @@ struct SVGImage
 	void clear();
 };
 
-struct SVGDevice
-{
-	HWND wnd;
-	CComPtr<ID2D1Factory> d2d_factory;
-	CComPtr<IDWriteFactory> dwrite_factory;
-	CComPtr<ID2D1HwndRenderTarget> render_target;
-	CComPtr<ID2D1DeviceContext> device_context;
-
-	bool init(HWND wnd);
-	void resize();
-	void render(const SVGImage& image);
-	void redraw();
-};
-
 struct SVGUtil
 {
 	bool parse(const wchar_t* file_name, const SVGDevice& device, SVGImage& image);
+	void render(const SVGDevice& device, const SVGImage& image);
 };
 

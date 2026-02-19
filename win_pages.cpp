@@ -24,7 +24,7 @@ void check_throw(HRESULT hr) {
 }
 
 class MainWindow : public CFrame {
-	SVGUtil svgUtil;
+	SVGUtil svg_util;
     SVGDevice device;
     SVGImage image;
 public:
@@ -47,7 +47,7 @@ public:
                 return;
 			}
 
-			if (svgUtil.parse(filename.c_str(), device, image)) {
+			if (svg_util.parse(filename.c_str(), device, image)) {
 				device.redraw();
             }
             else {
@@ -68,7 +68,7 @@ public:
             //invalidated region, or else we will get continuous
             //WM_PAINT messages.
             BeginPaint(m_wnd, &ps);
-            device.render(image);
+            svg_util.render(device, image);
             EndPaint(m_wnd, &ps);
             break;
         case WM_SIZE:
