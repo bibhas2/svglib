@@ -11,7 +11,7 @@ void ltrim_str(std::wstring_view& source);
 void rtrim_str(std::wstring_view& source);
 void collapse_whitespace(std::wstring_view& source, std::wstring& result);
 std::vector<std::wstring_view> split_string(std::wstring_view source, std::wstring_view separator);
-bool get_rgba(std::wstring_view source, float& r, float& g, float& b, float& a);
+bool get_css_color(std::wstring_view source, float& r, float& g, float& b, float& a);
 bool get_attribute(IXmlReader* xml_reader, const wchar_t* attr_name, std::wstring_view& attr_value);
 bool get_href_id(IXmlReader* xml_reader, std::wstring_view& ref_id);
 bool get_size_value(ID2D1DeviceContext* pContext, const std::wstring_view& source, float& size);

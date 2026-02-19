@@ -66,9 +66,9 @@ split_string(std::wstring_view source, std::wstring_view separator) {
 	return list;
 }
 
-bool get_rgba(std::wstring_view source, float& r, float& g, float& b, float& a) {
+bool get_css_color(std::wstring_view source, float& r, float& g, float& b, float& a) {
 	//Initialize named colors
-	static std::map<std::wstring, UINT32> namedColors = {
+	static std::map<std::wstring, UINT32> named_colors = {
 		{L"black", D2D1::ColorF::Black},
 		{L"white", D2D1::ColorF::White},
 		{L"red", D2D1::ColorF::Red},
@@ -96,8 +96,8 @@ bool get_rgba(std::wstring_view source, float& r, float& g, float& b, float& a) 
 
 	//See if it is a named color
 	if (source[0] != L'#') {
-		auto iter = namedColors.find(std::wstring(source));
-		if (iter != namedColors.end()) {
+		auto iter = named_colors.find(std::wstring(source));
+		if (iter != named_colors.end()) {
 			UINT32 color = iter->second;
 
 			r = ((color >> 16) & 0xFF) / 255.0f;
@@ -114,18 +114,18 @@ bool get_rgba(std::wstring_view source, float& r, float& g, float& b, float& a) 
 		return false;
 	}
 
-	std::wstring rStr(source.substr(1, 2));
-	std::wstring gStr(source.substr(3, 2));
-	std::wstring bStr(source.substr(5, 2));
+	std::wstring r_str(source.substr(1, 2));
+	std::wstring g_str(source.substr(3, 2));
+	std::wstring b_str(source.substr(5, 2));
 
-	r = static_cast<float>(std::stoul(rStr, nullptr, 16)) / 255.0f;
-	g = static_cast<float>(std::stoul(gStr, nullptr, 16)) / 255.0f;
-	b = static_cast<float>(std::stoul(bStr, nullptr, 16)) / 255.0f;
+	r = static_cast<float>(std::stoul(r_str, nullptr, 16)) / 255.0f;
+	g = static_cast<float>(std::stoul(g_str, nullptr, 16)) / 255.0f;
+	b = static_cast<float>(std::stoul(b_str, nullptr, 16)) / 255.0f;
 
 	if (source.length() == 9) {
-		std::wstring aStr(source.substr(7, 2));
+		std::wstring a_str(source.substr(7, 2));
 
-		a = static_cast<float>(std::stoul(aStr, nullptr, 16)) / 255.0f;
+		a = static_cast<float>(std::stoul(a_str, nullptr, 16)) / 255.0f;
 	}
 	else {
 		a = 1.0f;

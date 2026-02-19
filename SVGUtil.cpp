@@ -65,16 +65,16 @@ void SVGGraphicsElement::compute_bbox() {
 }
 
 bool get_element_name(IXmlReader *pReader, std::wstring_view& name) {
-	const wchar_t* pwszLocalName = NULL;
+	const wchar_t* local_name = nullptr;
 	UINT len;
 
-	HRESULT hr = pReader->GetLocalName(&pwszLocalName, &len);
+	HRESULT hr = pReader->GetLocalName(&local_name, &len);
 
-	if (!SUCCEEDED(hr)) {
+	if (!SUCCEEDED(hr) || local_name == nullptr) {
 		return false;
 	}
 
-	name = std::wstring_view(pwszLocalName, len);
+	name = std::wstring_view(local_name, len);
 
 	return true;
 }
@@ -231,7 +231,7 @@ void SVGGraphicsElement::create_presentation_assets(const std::vector<std::share
 	else {
 		float r, g, b, a;
 
-		if (get_rgba(style_value, r, g, b, a)) {
+		if (get_css_color(style_value, r, g, b, a)) {
 			CComPtr<ID2D1SolidColorBrush> brush;
 
 			hr = device.device_context->CreateSolidColorBrush(
@@ -313,7 +313,7 @@ void SVGGraphicsElement::create_presentation_assets(const std::vector<std::share
 	else {
 		float r, g, b, a;
 
-		if (get_rgba(style_value, r, g, b, a)) {
+		if (get_css_color(style_value, r, g, b, a)) {
 			CComPtr<ID2D1SolidColorBrush> brush;
 
 			hr = device.device_context->CreateSolidColorBrush(
