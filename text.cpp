@@ -89,8 +89,8 @@ void SVGTextElement::render(const SVGDevice& device) const {
 	}
 }
 
-void SVGTextElement::configure_presentation_style(const std::vector<std::shared_ptr<SVGGraphicsElement>>& parent_stack, ID2D1DeviceContext* device_context, ID2D1Factory* d2d_factory) {
-	SVGGraphicsElement::configure_presentation_style(parent_stack, device_context, d2d_factory);
+void SVGTextElement::create_presentation_assets(const std::vector<std::shared_ptr<SVGGraphicsElement>>& parent_stack, const SVGDevice& device) {
+	SVGGraphicsElement::create_presentation_assets(parent_stack, device);
 
 	std::wstring font_family;
 	std::wstring font_weight;
@@ -103,7 +103,7 @@ void SVGTextElement::configure_presentation_style(const std::vector<std::shared_
 	get_style_computed(parent_stack, L"font-style", font_style, L"normal");
 	get_style_computed(parent_stack, L"font-size", font_size_str, L"12");
 
-	get_size_value(device_context, font_size_str, fontSize);
+	get_size_value(device.device_context, font_size_str, fontSize);
 
 	this->text_format = build_text_format(
 		dwrite_factory,

@@ -212,7 +212,7 @@ bool apply_viewbox(ID2D1DeviceContext* pContext, std::shared_ptr<SVGGraphicsElem
 	}
 }
 
-void SVGGraphicsElement::configure_presentation_style(const std::vector<std::shared_ptr<SVGGraphicsElement>>& parent_stack, ID2D1DeviceContext* device_context, ID2D1Factory* d2d_factory) {
+void SVGGraphicsElement::create_presentation_assets(const std::vector<std::shared_ptr<SVGGraphicsElement>>& parent_stack, const SVGDevice& device) {
 	std::wstring style_value;
 	HRESULT hr = S_OK;
 
@@ -220,7 +220,7 @@ void SVGGraphicsElement::configure_presentation_style(const std::vector<std::sha
 	float stroke_opacity = 1.0f;
 
 	if (get_style_computed(parent_stack, L"stroke-opacity", style_value) &&
-		get_size_value(device_context, style_value, stroke_opacity)) {
+		get_size_value(device.device_context, style_value, stroke_opacity)) {
 	}
 
 	get_style_computed(parent_stack, L"stroke", style_value, L"none");
@@ -234,7 +234,7 @@ void SVGGraphicsElement::configure_presentation_style(const std::vector<std::sha
 		if (get_rgba(style_value, r, g, b, a)) {
 			CComPtr<ID2D1SolidColorBrush> brush;
 
-			hr = device_context->CreateSolidColorBrush(
+			hr = device.device_context->CreateSolidColorBrush(
 				D2D1::ColorF(r, g, b, a * stroke_opacity),
 				&brush
 			);
@@ -269,7 +269,7 @@ void SVGGraphicsElement::configure_presentation_style(const std::vector<std::sha
 		float miter_limit = 4.0f;
 
 		if (get_style_computed(parent_stack, L"stroke-miterlimit", style_value) &&
-			get_size_value(device_context, style_value, miter_limit)) {
+			get_size_value(device.device_context, style_value, miter_limit)) {
 		}
 
 		D2D1_STROKE_STYLE_PROPERTIES stroke_properties = D2D1::StrokeStyleProperties(
@@ -284,7 +284,7 @@ void SVGGraphicsElement::configure_presentation_style(const std::vector<std::sha
 
 		CComPtr<ID2D1StrokeStyle> ss;
 
-		hr = d2d_factory->CreateStrokeStyle(
+		hr = device.d2d_factory->CreateStrokeStyle(
 			&stroke_properties,
 			nullptr,
 			0,
@@ -301,7 +301,7 @@ void SVGGraphicsElement::configure_presentation_style(const std::vector<std::sha
 	float fill_opacity = 1.0f;
 
 	if (get_style_computed(parent_stack, L"fill-opacity", style_value) &&
-		get_size_value(device_context, style_value, fill_opacity)) {
+		get_size_value(device.device_context, style_value, fill_opacity)) {
 	}
 
 	//Get fill
@@ -316,7 +316,7 @@ void SVGGraphicsElement::configure_presentation_style(const std::vector<std::sha
 		if (get_rgba(style_value, r, g, b, a)) {
 			CComPtr<ID2D1SolidColorBrush> brush;
 
-			hr = device_context->CreateSolidColorBrush(
+			hr = device.device_context->CreateSolidColorBrush(
 				D2D1::ColorF(r, g, b, a * fill_opacity),
 				&brush
 			);
@@ -330,7 +330,7 @@ void SVGGraphicsElement::configure_presentation_style(const std::vector<std::sha
 	float w;
 
 	if (get_style_computed(parent_stack, L"stroke-width", style_value) &&
-		get_size_value(device_context, style_value, w)) {
+		get_size_value(device.device_context, style_value, w)) {
 		this->stroke_width = w;
 	}
 }
@@ -602,7 +602,7 @@ bool SVG::parse(const wchar_t* file_name, const SVGDevice& device, SVGImage& ima
 
 				collect_styles(xml_reader, new_element);
 
-				new_element->configure_presentation_style(parent_stack, device.device_context, device.d2d_factory);
+				new_element->create_presentation_assets(parent_stack, device);
 
 				if (parent_element) {
 					//Add the new element to its parent
