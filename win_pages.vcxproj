@@ -133,14 +133,32 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="circle.h" />
+    <ClInclude Include="defs.h" />
+    <ClInclude Include="ellipse.h" />
     <ClInclude Include="framework.h" />
+    <ClInclude Include="g.h" />
+    <ClInclude Include="line.h" />
+    <ClInclude Include="path.h" />
+    <ClInclude Include="rect.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="SVGUtil.h" />
     <ClInclude Include="targetver.h" />
+    <ClInclude Include="text.h" />
+    <ClInclude Include="utils.h" />
     <ClInclude Include="win_pages.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="circle.cpp" />
+    <ClCompile Include="defs.cpp" />
+    <ClCompile Include="ellipse.cpp" />
+    <ClCompile Include="g.cpp" />
+    <ClCompile Include="line.cpp" />
+    <ClCompile Include="path.cpp" />
+    <ClCompile Include="rect.cpp" />
     <ClCompile Include="SVGUtil.cpp" />
+    <ClCompile Include="text.cpp" />
+    <ClCompile Include="utils.cpp" />
     <ClCompile Include="win_pages.cpp" />
   </ItemGroup>
   <ItemGroup>
