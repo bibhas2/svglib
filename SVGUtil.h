@@ -35,8 +35,8 @@ struct SVGGraphicsElement {
 	std::map<std::wstring, std::wstring> styles;
 	D2D1_RECT_F bbox{};
 
-	virtual void render_tree(ID2D1DeviceContext* pContext) const;
-	virtual void render(ID2D1DeviceContext* pContext) const {};
+	virtual void render_tree(const SVGDevice& device) const;
+	virtual void render(const SVGDevice& device) const {};
 	virtual void configure_presentation_style(const std::vector<std::shared_ptr<SVGGraphicsElement>>& parent_stack, ID2D1DeviceContext* device_context, ID2D1Factory* d2d_factory);
 	virtual void compute_bbox();
 	bool get_style_computed(const std::vector<std::shared_ptr<SVGGraphicsElement>>& parent_stack, const std::wstring& style_name, std::wstring& style_value);
@@ -52,9 +52,9 @@ struct SVGImage
 	void clear();
 };
 
-struct SVGUtil
+struct SVG
 {
-	bool parse(const wchar_t* file_name, const SVGDevice& device, SVGImage& image);
-	void render(const SVGDevice& device, const SVGImage& image);
+	static bool parse(const wchar_t* file_name, const SVGDevice& device, SVGImage& image);
+	static void render(const SVGDevice& device, const SVGImage& image);
 };
 

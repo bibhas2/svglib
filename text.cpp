@@ -78,14 +78,14 @@ CComPtr<IDWriteTextFormat> build_text_format(IDWriteFactory* dwrite_factory, std
 	return nullptr;
 }
 
-void SVGTextElement::render(ID2D1DeviceContext* pContext) const {
+void SVGTextElement::render(const SVGDevice& device) const {
 	if (fill_brush && text_format && text_layout) {
 		//SVG spec requires x and y to specify the position of the text baseline
 		D2D1_POINT_2F  origin = D2D1::Point2F(
 			points[0],
 			points[1] - baseline);
 
-		pContext->DrawTextLayout(origin, text_layout, fill_brush);
+		device.device_context->DrawTextLayout(origin, text_layout, fill_brush);
 	}
 }
 

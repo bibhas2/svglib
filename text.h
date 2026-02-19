@@ -8,5 +8,5 @@ struct SVGTextElement : public SVGGraphicsElement {
 	float baseline = 0.0f;
 
 	void configure_presentation_style(const std::vector<std::shared_ptr<SVGGraphicsElement>>& parent_stack, ID2D1DeviceContext* device_context, ID2D1Factory* d2d_factory) override;
-	void render(ID2D1DeviceContext* pContext) const override;
+	void render(const SVGDevice& device) const override;
 };

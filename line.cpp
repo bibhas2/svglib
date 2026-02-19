@@ -8,9 +8,9 @@ void SVGLineElement::compute_bbox() {
 	bbox.bottom = points[1] > points[3] ? points[1] : points[3];
 }
 
-void SVGLineElement::render(ID2D1DeviceContext* pContext) const {
+void SVGLineElement::render(const SVGDevice& device) const {
 	if (stroke_brush) {
-		pContext->DrawLine(
+		device.device_context->DrawLine(
 			D2D1::Point2F(points[0], points[1]),
 			D2D1::Point2F(points[2], points[3]),
 			stroke_brush,

@@ -8,16 +8,16 @@ void SVGRectElement::compute_bbox() {
 	bbox.bottom = points[1] + points[3];
 }
 
-void SVGRectElement::render(ID2D1DeviceContext* pContext) const {
+void SVGRectElement::render(const SVGDevice& device) const {
 	if (fill_brush) {
 		if (points.size() == 4) {
-			pContext->FillRectangle(
+			device.device_context->FillRectangle(
 				D2D1::RectF(points[0], points[1], points[0] + points[2], points[1] + points[3]),
 				fill_brush
 			);
 		}
 		else if (points.size() == 6) {
-			pContext->FillRoundedRectangle(
+			device.device_context->FillRoundedRectangle(
 				D2D1::RoundedRect(
 					D2D1::RectF(points[0], points[1], points[0] + points[2], points[1] + points[3]),
 					points[4], points[5]),
@@ -27,7 +27,7 @@ void SVGRectElement::render(ID2D1DeviceContext* pContext) const {
 	}
 	if (stroke_brush) {
 		if (points.size() == 4) {
-			pContext->DrawRectangle(
+			device.device_context->DrawRectangle(
 				D2D1::RectF(points[0], points[1], points[0] + points[2], points[1] + points[3]),
 				stroke_brush,
 				stroke_width,
@@ -35,7 +35,7 @@ void SVGRectElement::render(ID2D1DeviceContext* pContext) const {
 			);
 		}
 		else if (points.size() == 6) {
-			pContext->DrawRoundedRectangle(
+			device.device_context->DrawRoundedRectangle(
 				D2D1::RoundedRect(
 					D2D1::RectF(points[0], points[1], points[0] + points[2], points[1] + points[3]),
 					points[4], points[5]),

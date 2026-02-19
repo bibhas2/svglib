@@ -19,7 +19,7 @@ void SVGImage::clear() {
 	root_element = nullptr;
 }
 
-void SVGGraphicsElement::render_tree(ID2D1DeviceContext* pContext) const {
+void SVGGraphicsElement::render_tree(const SVGDevice& device) const {
 	OutputDebugStringW(L"Rendering element: ");
 	OutputDebugStringW(tag_name.c_str());
 	OutputDebugStringW(L"\n");
@@ -29,23 +29,23 @@ void SVGGraphicsElement::render_tree(ID2D1DeviceContext* pContext) const {
 
 	if (combined_transform) {
 		OutputDebugStringW(L"Applying transform\n");
-		pContext->GetTransform(&oldTransform);
+		device.device_context->GetTransform(&oldTransform);
 
 		auto totalTransform = combined_transform.value() * oldTransform;
 
-		pContext->SetTransform(totalTransform);
+		device.device_context->SetTransform(totalTransform);
 	}
 
-	render(pContext);
+	render(device);
 
 	//Render all child elements
 	for (const auto& child : children) {
-		child->render_tree(pContext);
+		child->render_tree(device);
 	}
 
 	if (combined_transform) {
 		OutputDebugStringW(L"Restoring transform\n");
-		pContext->SetTransform(oldTransform);
+		device.device_context->SetTransform(oldTransform);
 	}
 }
 
@@ -335,7 +335,7 @@ void SVGGraphicsElement::configure_presentation_style(const std::vector<std::sha
 	}
 }
 
-bool SVGUtil::parse(const wchar_t* file_name, const SVGDevice& device, SVGImage& image) {
+bool SVG::parse(const wchar_t* file_name, const SVGDevice& device, SVGImage& image) {
 	CComPtr<IXmlReader> xml_reader;
 
 	HRESULT hr = ::CreateXmlReader(__uuidof(IXmlReader), (void**)&xml_reader, NULL);
@@ -741,14 +741,14 @@ bool SVGUtil::parse(const wchar_t* file_name, const SVGDevice& device, SVGImage&
 }
 
 // Render the loaded bitmap onto the window
-void SVGUtil::render(const SVGDevice& device, const SVGImage& image)
+void SVG::render(const SVGDevice& device, const SVGImage& image)
 {
 	device.device_context->BeginDraw();
 	device.device_context->Clear(D2D1::ColorF(D2D1::ColorF::White));
 
 	if (image.root_element) {
 		//Render the SVG element tree
-		image.root_element->render_tree(device.device_context);
+		image.root_element->render_tree(device);
 	}
 
 	device.device_context->EndDraw();

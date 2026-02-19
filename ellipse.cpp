@@ -9,15 +9,15 @@ void SVGEllipseElement::compute_bbox() {
 }
 
 //Render SVGEllipseElement
-void SVGEllipseElement::render(ID2D1DeviceContext* pContext) const {
+void SVGEllipseElement::render(const SVGDevice& device) const {
 	if (fill_brush) {
-		pContext->FillEllipse(
+		device.device_context->FillEllipse(
 			D2D1::Ellipse(D2D1::Point2F(points[0], points[1]), points[2], points[3]),
 			fill_brush
 		);
 	}
 	if (stroke_brush) {
-		pContext->DrawEllipse(
+		device.device_context->DrawEllipse(
 			D2D1::Ellipse(D2D1::Point2F(points[0], points[1]), points[2], points[3]),
 			stroke_brush,
 			stroke_width

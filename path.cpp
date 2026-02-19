@@ -290,11 +290,11 @@ void SVGPathElement::compute_bbox() {
 	}
 }
 
-void SVGPathElement::render(ID2D1DeviceContext* pContext) const {
+void SVGPathElement::render(const SVGDevice& device) const {
 	if (fill_brush) {
-		pContext->FillGeometry(path_geometry, fill_brush);
+		device.device_context->FillGeometry(path_geometry, fill_brush);
 	}
 	if (stroke_brush) {
-		pContext->DrawGeometry(path_geometry, stroke_brush, stroke_width, stroke_style);
+		device.device_context->DrawGeometry(path_geometry, stroke_brush, stroke_width, stroke_style);
 	}
 }
