@@ -3,8 +3,8 @@
 #include <sstream>
 
 
-void SVGPathElement::build_path(ID2D1Factory* pD2DFactory, const std::wstring_view& pathData) {
-	pD2DFactory->CreatePathGeometry(&path_geometry);
+void SVGPathElement::build_path(ID2D1Factory* d2d_factory, const std::wstring_view& pathData) {
+	d2d_factory->CreatePathGeometry(&path_geometry);
 
 	CComPtr<ID2D1GeometrySink> pSink;
 

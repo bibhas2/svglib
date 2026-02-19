@@ -3,7 +3,7 @@
 #include "utils.h"
 #include <sstream>
 
-CComPtr<IDWriteTextFormat> build_text_format(IDWriteFactory* pDWriteFactory, std::wstring_view family, std::wstring_view weight, std::wstring_view style, float size) {
+CComPtr<IDWriteTextFormat> build_text_format(IDWriteFactory* dwrite_factory, std::wstring_view family, std::wstring_view weight, std::wstring_view style, float size) {
 	CComPtr<IDWriteTextFormat> tfmt;
 	//Split the family string by commas and try to find the first installed font
 	auto families = split_string(family, L",");
@@ -60,7 +60,7 @@ CComPtr<IDWriteTextFormat> build_text_format(IDWriteFactory* pDWriteFactory, std
 
 		std::wstring trimmedFamily(fam);
 
-		HRESULT hr = pDWriteFactory->CreateTextFormat(
+		HRESULT hr = dwrite_factory->CreateTextFormat(
 			trimmedFamily.c_str(),
 			nullptr,
 			fontWeight,
@@ -89,27 +89,27 @@ void SVGTextElement::render(ID2D1DeviceContext* pContext) {
 	}
 }
 
-void SVGTextElement::configure_presentation_style(const std::vector<std::shared_ptr<SVGGraphicsElement>>& parent_stack, ID2D1DeviceContext* pDeviceContext, ID2D1Factory* pD2DFactory) {
-	SVGGraphicsElement::configure_presentation_style(parent_stack, pDeviceContext, pD2DFactory);
+void SVGTextElement::configure_presentation_style(const std::vector<std::shared_ptr<SVGGraphicsElement>>& parent_stack, ID2D1DeviceContext* device_context, ID2D1Factory* d2d_factory) {
+	SVGGraphicsElement::configure_presentation_style(parent_stack, device_context, d2d_factory);
 
-	std::wstring fontFamily;
-	std::wstring fontWeight;
-	std::wstring fontStyle;
-	std::wstring fontSizeStr;
+	std::wstring font_family;
+	std::wstring font_weight;
+	std::wstring font_style;
+	std::wstring font_size_str;
 	float fontSize = 12.0f;
 
-	get_style_computed(parent_stack, L"font-family", fontFamily, L"Arial, sans-serif, Verdana");
-	get_style_computed(parent_stack, L"font-weight", fontWeight, L"normal");
-	get_style_computed(parent_stack, L"font-style", fontStyle, L"normal");
-	get_style_computed(parent_stack, L"font-size", fontSizeStr, L"12");
+	get_style_computed(parent_stack, L"font-family", font_family, L"Arial, sans-serif, Verdana");
+	get_style_computed(parent_stack, L"font-weight", font_weight, L"normal");
+	get_style_computed(parent_stack, L"font-style", font_style, L"normal");
+	get_style_computed(parent_stack, L"font-size", font_size_str, L"12");
 
-	get_size_value(pDeviceContext, fontSizeStr, fontSize);
+	get_size_value(device_context, font_size_str, fontSize);
 
 	this->text_format = build_text_format(
-		pDWriteFactory,
-		fontFamily,
-		fontWeight,
-		fontStyle,
+		dwrite_factory,
+		font_family,
+		font_weight,
+		font_style,
 		fontSize
 	);
 }
