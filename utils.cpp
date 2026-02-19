@@ -134,11 +134,11 @@ bool get_rgba(std::wstring_view source, float& r, float& g, float& b, float& a) 
 	return true;
 }
 
-bool get_attribute(IXmlReader* pReader, const wchar_t* attr_name, std::wstring_view& attr_value) {
-	const wchar_t* pwszValue = NULL;
+bool get_attribute(IXmlReader* xml_reader, const wchar_t* attr_name, std::wstring_view& attr_value) {
+	const wchar_t* attr_value_str = nullptr;
 	UINT len;
 
-	HRESULT hr = pReader->MoveToAttributeByName(attr_name, NULL);
+	HRESULT hr = xml_reader->MoveToAttributeByName(attr_name, NULL);
 
 	if (hr == S_FALSE) {
 		return false; //Attribute not found
@@ -148,13 +148,13 @@ bool get_attribute(IXmlReader* pReader, const wchar_t* attr_name, std::wstring_v
 		return false;
 	}
 
-	hr = pReader->GetValue(&pwszValue, &len);
+	hr = xml_reader->GetValue(&attr_value_str, &len);
 
-	if (!SUCCEEDED(hr)) {
+	if (!SUCCEEDED(hr) || attr_value_str == nullptr) {
 		return false;
 	}
 
-	attr_value = std::wstring_view(pwszValue, len);
+	attr_value = std::wstring_view(attr_value_str, len);
 
 	return true;
 }
@@ -162,10 +162,10 @@ bool get_attribute(IXmlReader* pReader, const wchar_t* attr_name, std::wstring_v
 //Gets the id reference from the href or xlink:href attribute.
 //Only reference by ID values like href="#someId" or href="url(#someId)"
 //are supported
-bool get_href_id(IXmlReader* pReader, std::wstring_view& ref_id) {
+bool get_href_id(IXmlReader* xml_reader, std::wstring_view& ref_id) {
 	std::wstring_view source;
 
-	if (!get_attribute(pReader, L"href", source)) {
+	if (!get_attribute(xml_reader, L"href", source)) {
 		return false;
 	}
 
@@ -250,14 +250,14 @@ bool get_size_value(ID2D1DeviceContext* pContext, const std::wstring_view& sourc
 	}
 }
 
-bool get_size_attribute(IXmlReader* pReader, ID2D1DeviceContext* pContext, const wchar_t* attr_name, float& size) {
+bool get_size_attribute(IXmlReader* xml_reader, ID2D1DeviceContext* device_context, const wchar_t* attr_name, float& size) {
 	std::wstring_view attr_value;
 
-	if (!get_attribute(pReader, attr_name, attr_value)) {
+	if (!get_attribute(xml_reader, attr_name, attr_value)) {
 		return false;
 	}
 
-	return get_size_value(pContext, attr_value, size);
+	return get_size_value(device_context, attr_value, size);
 }
 
 bool get_transform_functions(const std::wstring_view& source, std::vector<TransformFunction>& functions) {
@@ -321,10 +321,10 @@ bool get_transform_functions(const std::wstring_view& source, std::vector<Transf
 	return true;
 }
 
-bool build_transform_matrix(const std::wstring_view& transformStr, D2D1_MATRIX_3X2_F& outMatrix) {
+bool build_transform_matrix(const std::wstring_view& transform_str, D2D1_MATRIX_3X2_F& matrix) {
 	std::vector<TransformFunction> functions;
 
-	if (!get_transform_functions(transformStr, functions)) {
+	if (!get_transform_functions(transform_str, functions)) {
 		return false;
 	}
 
@@ -334,26 +334,26 @@ bool build_transform_matrix(const std::wstring_view& transformStr, D2D1_MATRIX_3
 
 		if (f.name == L"translate") {
 			if (f.values.size() == 1) {
-				outMatrix = outMatrix * D2D1::Matrix3x2F::Translation(f.values[0], 0.0f);
+				matrix = matrix * D2D1::Matrix3x2F::Translation(f.values[0], 0.0f);
 			}
 			else if (f.values.size() == 2) {
-				outMatrix = outMatrix * D2D1::Matrix3x2F::Translation(f.values[0], f.values[1]);
+				matrix = matrix * D2D1::Matrix3x2F::Translation(f.values[0], f.values[1]);
 			}
 		}
 		else if (f.name == L"scale") {
 			if (f.values.size() == 1) {
-				outMatrix = outMatrix * D2D1::Matrix3x2F::Scale(f.values[0], f.values[0]);
+				matrix = matrix * D2D1::Matrix3x2F::Scale(f.values[0], f.values[0]);
 			}
 			else if (f.values.size() == 2) {
-				outMatrix = outMatrix * D2D1::Matrix3x2F::Scale(f.values[0], f.values[1]);
+				matrix = matrix * D2D1::Matrix3x2F::Scale(f.values[0], f.values[1]);
 			}
 		}
 		else if (f.name == L"rotate") {
 			if (f.values.size() == 1) {
-				outMatrix = outMatrix * D2D1::Matrix3x2F::Rotation(f.values[0]);
+				matrix = matrix * D2D1::Matrix3x2F::Rotation(f.values[0]);
 			}
 			else if (f.values.size() == 3) {
-				outMatrix = outMatrix * D2D1::Matrix3x2F::Rotation(f.values[0], D2D1::Point2F(f.values[1], f.values[2]));
+				matrix = matrix * D2D1::Matrix3x2F::Rotation(f.values[0], D2D1::Point2F(f.values[1], f.values[2]));
 			}
 		}
 		else if (f.name == L"matrix") {
@@ -364,13 +364,13 @@ bool build_transform_matrix(const std::wstring_view& transformStr, D2D1_MATRIX_3
 					f.values[4], f.values[5]
 				);
 
-				outMatrix = outMatrix * m;
+				matrix = matrix * m;
 			}
 		}
 		else if (f.name == L"skew") {
 			//Apply skew transform
 			if (f.values.size() == 2) {
-				outMatrix = outMatrix * D2D1::Matrix3x2F::Skew(f.values[0], f.values[1]);
+				matrix = matrix * D2D1::Matrix3x2F::Skew(f.values[0], f.values[1]);
 			}
 		}
 	}
