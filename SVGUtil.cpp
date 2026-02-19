@@ -163,14 +163,14 @@ void SVGGraphicsElement::get_style_computed(const std::vector<std::shared_ptr<SV
 	}
 }
 
-bool apply_viewbox(ID2D1DeviceContext* pContext, std::shared_ptr<SVGGraphicsElement> e, IXmlReader* pReader) {
+bool apply_viewbox(ID2D1DeviceContext* device_context, std::shared_ptr<SVGGraphicsElement> e, IXmlReader* pReader) {
 	//Default viewport width and height
-	float width = 300.0f, height = 150.0f;
+	float width = device_context->GetSize().width, height = device_context->GetSize().height;
 	float vb_x = 0.0f, vb_y = 0.0f, vb_width = width, vb_height = height;
 
 	//Read width and height attributes
-	get_size_attribute(pReader, pContext, L"width", width);
-	get_size_attribute(pReader, pContext, L"height", height);
+	get_size_attribute(pReader, device_context, L"width", width);
+	get_size_attribute(pReader, device_context, L"height", height);
 
 	std::wstring_view viewBoxStr;
 	std::wstringstream ws;
