@@ -30,17 +30,6 @@ struct SVGGraphicsElement {
 	void get_style_computed(const std::vector<std::shared_ptr<SVGGraphicsElement>>& parent_stack, const std::wstring& style_name, std::wstring& style_value, const std::wstring& default_value);
 };
 
-
-
-
-
-
-
-
-
-
-
-
 struct SVGUtil
 {
 	HWND wnd;
@@ -48,13 +37,9 @@ struct SVGUtil
 	CComPtr<IDWriteFactory> pDWriteFactory;
 	CComPtr<ID2D1HwndRenderTarget> pRenderTarget;
 	CComPtr<ID2D1DeviceContext> pDeviceContext;
-	CComPtr<ID2D1SolidColorBrush> defaultFillBrush;
-	CComPtr<ID2D1SolidColorBrush> defaultStrokeBrush;
-	CComPtr<IDWriteTextFormat> defaultTextFormat;
 	std::shared_ptr<SVGGraphicsElement> root_element;
 	std::map<std::wstring, std::shared_ptr<SVGGraphicsElement>> id_map;
 	std::map<std::wstring, std::shared_ptr<SVGGraphicsElement>> defs_map;
-
 
 	bool init(HWND wnd);
 	void resize();

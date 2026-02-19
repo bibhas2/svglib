@@ -103,24 +103,6 @@ bool SVGUtil::init(HWND _wnd)
 		return false;
 	}
 
-	hr = pDeviceContext->CreateSolidColorBrush(
-		D2D1::ColorF(D2D1::ColorF::Black),
-		&defaultStrokeBrush
-	);
-
-	if (!SUCCEEDED(hr)) {
-		return false;
-	}
-
-	hr = pDeviceContext->CreateSolidColorBrush(
-		D2D1::ColorF(D2D1::ColorF::Black),
-		&defaultFillBrush
-	);
-
-	if (!SUCCEEDED(hr)) {
-		return false;
-	}
-
 	return true;
 }
 
@@ -479,10 +461,6 @@ bool SVGUtil::parse(const wchar_t* fileName) {
 
 			if (element_name == L"svg") {
 				new_element = std::make_shared<SVGGraphicsElement>();
-
-				//Set up default brushes
-				new_element->fill_brush = defaultFillBrush;
-				new_element->stroke_brush = nullptr;
 
 				if (!root_element)
 				{
