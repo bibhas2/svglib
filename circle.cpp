@@ -8,7 +8,7 @@ void SVGCircleElement::compute_bbox() {
 	bbox.bottom = points[1] + points[2];
 }
 
-void SVGCircleElement::render(ID2D1DeviceContext* pContext) {
+void SVGCircleElement::render(ID2D1DeviceContext* pContext) const {
 	if (fill_brush) {
 		pContext->FillEllipse(
 			D2D1::Ellipse(D2D1::Point2F(points[0], points[1]), points[2], points[2]),

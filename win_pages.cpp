@@ -25,12 +25,14 @@ void check_throw(HRESULT hr) {
 
 class MainWindow : public CFrame {
 	SVGUtil svgUtil;
+    SVGDevice device;
+    SVGImage image;
 public:
     
     void create() {
         CFrame::create("Image Viewer", 800, 600, IDC_WINPAGES);
 
-		svgUtil.init(getWindow());
+		device.init(getWindow());
     }
     void onClose() override {
         CWindow::stop();
@@ -45,8 +47,8 @@ public:
                 return;
 			}
 
-			if (svgUtil.parse(filename.c_str())) {
-				svgUtil.redraw();
+			if (svgUtil.parse(filename.c_str(), device, image)) {
+				device.redraw();
             }
             else {
 				errorBox("Failed to open or parse the SVG file.");
@@ -66,11 +68,11 @@ public:
             //invalidated region, or else we will get continuous
             //WM_PAINT messages.
             BeginPaint(m_wnd, &ps);
-            svgUtil.render();
+            device.render(image);
             EndPaint(m_wnd, &ps);
             break;
         case WM_SIZE:
-            svgUtil.resize();
+            device.resize();
             break;
         case WM_ERASEBKGND:
 			//Handle background erase to avoid flickering 

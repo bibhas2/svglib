@@ -13,7 +13,13 @@
 #include "text.h"
 #include "utils.h"
 
-void SVGGraphicsElement::render_tree(ID2D1DeviceContext* pContext) {
+void SVGImage::clear() {
+	id_map.clear();
+	defs_map.clear();
+	root_element = nullptr;
+}
+
+void SVGGraphicsElement::render_tree(ID2D1DeviceContext* pContext) const {
 	OutputDebugStringW(L"Rendering element: ");
 	OutputDebugStringW(tag_name.c_str());
 	OutputDebugStringW(L"\n");
@@ -56,77 +62,6 @@ void SVGGraphicsElement::compute_bbox() {
 		bbox.right = child->bbox.right > bbox.right ? child->bbox.right : bbox.right;
 		bbox.bottom = child->bbox.bottom > bbox.bottom ? child->bbox.bottom : bbox.bottom;
 	}
-}
-
-bool SVGUtil::init(HWND _wnd)
-{
-	wnd = _wnd;
-
-	HRESULT hr = D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, &d2d_factory);
-	
-	if (!SUCCEEDED(hr)) {
-		return false;
-	}
-
-	hr = DWriteCreateFactory(
-		DWRITE_FACTORY_TYPE_SHARED,
-		__uuidof(IDWriteFactory),
-		reinterpret_cast<IUnknown**>(&dwrite_factory)
-	);
-
-	if (!SUCCEEDED(hr)) {
-		return false;
-	}
-
-	// Create Render Target
-	RECT rc;
-
-	GetClientRect(_wnd, &rc);
-
-	hr = d2d_factory->CreateHwndRenderTarget(
-		D2D1::RenderTargetProperties(),
-		D2D1::HwndRenderTargetProperties(
-			_wnd,
-			D2D1::SizeU(rc.right - rc.left, rc.bottom - rc.top)
-		),
-		&render_target
-	);
-
-	if (!SUCCEEDED(hr)) {
-		return false;
-	}
-
-	//Get the device context from the render target
-	hr = render_target->QueryInterface(IID_PPV_ARGS(&device_context));
-
-	if (!SUCCEEDED(hr)) {
-		return false;
-	}
-
-	return true;
-}
-
-// Resize the render target when the window size changes
-void SVGUtil::resize()
-{
-	RECT rc;
-
-	GetClientRect(wnd, &rc);
-	render_target->Resize(D2D1::SizeU(rc.right - rc.left, rc.bottom - rc.top));
-}
-
-// Render the loaded bitmap onto the window
-void SVGUtil::render()
-{
-	device_context->BeginDraw();
-	device_context->Clear(D2D1::ColorF(D2D1::ColorF::White));
-
-	if (root_element) {
-		//Render the SVG element tree
-		root_element->render_tree(device_context);
-	}
-
-	device_context->EndDraw();
 }
 
 bool get_element_name(IXmlReader *pReader, std::wstring_view& name) {
@@ -400,38 +335,40 @@ void SVGGraphicsElement::configure_presentation_style(const std::vector<std::sha
 	}
 }
 
-bool SVGUtil::parse(const wchar_t* fileName) {
-	CComPtr<IXmlReader> pReader;
+bool SVGUtil::parse(const wchar_t* file_name, const SVGDevice& device, SVGImage& image) {
+	CComPtr<IXmlReader> xml_reader;
 
-	HRESULT hr = ::CreateXmlReader(__uuidof(IXmlReader), (void**)&pReader, NULL);
+	HRESULT hr = ::CreateXmlReader(__uuidof(IXmlReader), (void**)&xml_reader, NULL);
 
 	if (!SUCCEEDED(hr)) {
 		return false;
 	}
 
-	CComPtr<IStream> pFileStream;
+	CComPtr<IStream> file_stream;
 
-	hr = SHCreateStreamOnFileEx(fileName, STGM_READ | STGM_SHARE_DENY_WRITE, FILE_ATTRIBUTE_NORMAL, FALSE, NULL, &pFileStream);
+	hr = ::SHCreateStreamOnFileEx(file_name, 
+		STGM_READ | STGM_SHARE_DENY_WRITE, FILE_ATTRIBUTE_NORMAL, FALSE, NULL, 
+		&file_stream);
 	
 	if (!SUCCEEDED(hr)) {
 		return false;
 	}
 
-	hr = pReader->SetInput(pFileStream);
+	hr = xml_reader->SetInput(file_stream);
 
 	if (!SUCCEEDED(hr)) {
 		return false;
 	}
 
-	//Clear any existing root element
-	root_element = nullptr;
+	//Clear previous image
+	image.clear();
 
 	std::vector<std::shared_ptr<SVGGraphicsElement>> parent_stack;
 
 	while (true) {
-		XmlNodeType nodeType;
+		XmlNodeType node_type;
 
-		hr = pReader->Read(&nodeType);
+		hr = xml_reader->Read(&node_type);
 
 		if (hr == S_FALSE) {
 			break; //End of file
@@ -441,14 +378,14 @@ bool SVGUtil::parse(const wchar_t* fileName) {
 			return false;
 		}
 
-		if (nodeType == XmlNodeType_Element) {
+		if (node_type == XmlNodeType_Element) {
 			//We must call IsEmptyElement before reading
 			//any attributes!!!
-			bool is_self_closing = pReader->IsEmptyElement();
+			bool is_self_closing = xml_reader->IsEmptyElement();
 
 			std::wstring_view element_name, attr_value;
 
-			if (!get_element_name(pReader, element_name)) {
+			if (!get_element_name(xml_reader, element_name)) {
 				return false;
 			}
 
@@ -462,30 +399,30 @@ bool SVGUtil::parse(const wchar_t* fileName) {
 			if (element_name == L"svg") {
 				new_element = std::make_shared<SVGGraphicsElement>();
 
-				if (!root_element)
+				if (!image.root_element)
 				{
 					//This is the root <svg> element
-					root_element = new_element;
+					image.root_element = new_element;
 				}
 				else {
 					//Inner svg elements have some special treatment
 					float x = 0.0f, y = 0.0f, width = 100.0f, height = 100.0f;
 
-					if (get_size_attribute(pReader, device_context, L"x", x) &&
-						get_size_attribute(pReader, device_context, L"y", y)) {
+					if (get_size_attribute(xml_reader, device.device_context, L"x", x) &&
+						get_size_attribute(xml_reader, device.device_context, L"y", y)) {
 						//Position the inner SVG element
 						new_element->combined_transform = D2D1::Matrix3x2F::Translation(x, y);
 					}
 				}
 
-				apply_viewbox(device_context, new_element, pReader);
+				apply_viewbox(device.device_context, new_element, xml_reader);
 			}
 			else if (element_name == L"rect") {
 				float x, y, width, height, rx, ry;
-				if (get_size_attribute(pReader, device_context, L"x", x) &&
-					get_size_attribute(pReader, device_context, L"y", y) &&
-					get_size_attribute(pReader, device_context, L"width", width) &&
-					get_size_attribute(pReader, device_context, L"height", height)) {
+				if (get_size_attribute(xml_reader, device.device_context, L"x", x) &&
+					get_size_attribute(xml_reader, device.device_context, L"y", y) &&
+					get_size_attribute(xml_reader, device.device_context, L"width", width) &&
+					get_size_attribute(xml_reader, device.device_context, L"height", height)) {
 					new_element = std::make_shared<SVGRectElement>();
 
 					new_element->points.push_back(x);
@@ -494,8 +431,8 @@ bool SVGUtil::parse(const wchar_t* fileName) {
 					new_element->points.push_back(height);
 				}
 
-				bool has_rx = get_size_attribute(pReader, device_context, L"rx", rx);
-				bool has_ry = get_size_attribute(pReader, device_context, L"ry", ry);
+				bool has_rx = get_size_attribute(xml_reader, device.device_context, L"rx", rx);
+				bool has_ry = get_size_attribute(xml_reader, device.device_context, L"ry", ry);
 
 				if (has_rx || has_ry) {
 					if (!has_rx) {
@@ -512,9 +449,9 @@ bool SVGUtil::parse(const wchar_t* fileName) {
 			else if (element_name == L"circle") {
 				float cx, cy, r;
 
-				if (get_size_attribute(pReader, device_context, L"cx", cx) &&
-					get_size_attribute(pReader, device_context, L"cy", cy) &&
-					get_size_attribute(pReader, device_context, L"r", r)) {
+				if (get_size_attribute(xml_reader, device.device_context, L"cx", cx) &&
+					get_size_attribute(xml_reader, device.device_context, L"cy", cy) &&
+					get_size_attribute(xml_reader, device.device_context, L"r", r)) {
 					
 					auto circle_element = std::make_shared<SVGCircleElement>();
 
@@ -528,16 +465,16 @@ bool SVGUtil::parse(const wchar_t* fileName) {
 			else if (element_name == L"ellipse") {
 				float cx, cy, rx, ry;
 
-				if (!get_size_attribute(pReader, device_context, L"cx", cx)) {
+				if (!get_size_attribute(xml_reader, device.device_context, L"cx", cx)) {
 					cx = 0.0f;
 				}
 
-				if (!get_size_attribute(pReader, device_context, L"cy", cy)) {
+				if (!get_size_attribute(xml_reader, device.device_context, L"cy", cy)) {
 					cy = 0.0f;
 				}
 
-				if (get_size_attribute(pReader, device_context, L"rx", rx) &&
-					get_size_attribute(pReader, device_context, L"ry", ry)) {
+				if (get_size_attribute(xml_reader, device.device_context, L"rx", rx) &&
+					get_size_attribute(xml_reader, device.device_context, L"ry", ry)) {
 					
 					auto ellipse_element = std::make_shared<SVGEllipseElement>();
 
@@ -550,34 +487,34 @@ bool SVGUtil::parse(const wchar_t* fileName) {
 				}
 			}
 			else if (element_name == L"path") {
-				if (get_attribute(pReader, L"d", attr_value)) {
+				if (get_attribute(xml_reader, L"d", attr_value)) {
 					auto path_element = std::make_shared<SVGPathElement>();
 
-					path_element->build_path(d2d_factory, attr_value);
+					path_element->build_path(device.d2d_factory, attr_value);
 					new_element = path_element;
 				}
 			}
 			else if (element_name == L"polyline") {
-				if (get_attribute(pReader, L"points", attr_value)) {
+				if (get_attribute(xml_reader, L"points", attr_value)) {
 					auto polyline_element = std::make_shared<SVGPathElement>();
 					std::wstring path_data(L"M");
 					
 					path_data += attr_value;
 					
-					polyline_element->build_path(d2d_factory, path_data);
+					polyline_element->build_path(device.d2d_factory, path_data);
 
 					new_element = polyline_element;
 				}
 			}
 			else if (element_name == L"polygon") {
-				if (get_attribute(pReader, L"points", attr_value)) {
+				if (get_attribute(xml_reader, L"points", attr_value)) {
 					auto polygon_element = std::make_shared<SVGPathElement>();
 					std::wstring path_data(L"M");
 
 					path_data.append(attr_value);
 					path_data.append(L"Z");
 
-					polygon_element->build_path(d2d_factory, path_data);
+					polygon_element->build_path(device.d2d_factory, path_data);
 
 					new_element = polygon_element;
 				}
@@ -588,10 +525,10 @@ bool SVGUtil::parse(const wchar_t* fileName) {
 			} else if (element_name == L"line") {
 				float x1, y1, x2, y2;
 
-				if (get_size_attribute(pReader, device_context, L"x1", x1) &&
-					get_size_attribute(pReader, device_context, L"y1", y1) &&
-					get_size_attribute(pReader, device_context, L"x2", x2) &&
-					get_size_attribute(pReader, device_context, L"y2", y2)) {
+				if (get_size_attribute(xml_reader, device.device_context, L"x1", x1) &&
+					get_size_attribute(xml_reader, device.device_context, L"y1", y1) &&
+					get_size_attribute(xml_reader, device.device_context, L"x2", x2) &&
+					get_size_attribute(xml_reader, device.device_context, L"y2", y2)) {
 					
 					auto line_element = std::make_shared<SVGLineElement>();
 
@@ -607,13 +544,13 @@ bool SVGUtil::parse(const wchar_t* fileName) {
 				auto text_element = std::make_shared<SVGTextElement>();
 				float x = 0, y = 0;
 
-				get_size_attribute(pReader, device_context, L"x", x);
-				get_size_attribute(pReader, device_context, L"y", y);
+				get_size_attribute(xml_reader, device.device_context, L"x", x);
+				get_size_attribute(xml_reader, device.device_context, L"y", y);
 
 				text_element->points.push_back(x);
 				text_element->points.push_back(y);
 
-				text_element->dwrite_factory = dwrite_factory;
+				text_element->dwrite_factory = device.dwrite_factory;
 
 				new_element = text_element;
 			}
@@ -621,10 +558,10 @@ bool SVGUtil::parse(const wchar_t* fileName) {
 				new_element = std::make_shared<SVGDefsElement>();
 			}
 			else if (element_name == L"use") {
-				if (get_href_id(pReader, attr_value)) {
-					auto it = defs_map.find(std::wstring(attr_value));
+				if (get_href_id(xml_reader, attr_value)) {
+					auto it = image.defs_map.find(std::wstring(attr_value));
 
-					if (it != defs_map.end()) {
+					if (it != image.defs_map.end()) {
 						//TBD: Clone the referred element
 						new_element = it->second;
 					}
@@ -638,18 +575,18 @@ bool SVGUtil::parse(const wchar_t* fileName) {
 			if (new_element) {
 				new_element->tag_name = element_name;
 
-				if (get_attribute(pReader, L"id", attr_value)) {
+				if (get_attribute(xml_reader, L"id", attr_value)) {
 					std::wstring id(attr_value);
 
-					id_map[id] = new_element;
+					image.id_map[id] = new_element;
 
 					if (parent_element && parent_element->tag_name == L"defs") {
-						defs_map[id] = new_element;
+						image.defs_map[id] = new_element;
 					}
 				}
 
 				//Transform is not inherited
-				if (get_attribute(pReader, L"transform", attr_value)) {
+				if (get_attribute(xml_reader, L"transform", attr_value)) {
 					D2D1_MATRIX_3X2_F trans = D2D1::Matrix3x2F::Identity();
 
 					//If the element already has a transform (like inner <svg>), combine them
@@ -663,9 +600,9 @@ bool SVGUtil::parse(const wchar_t* fileName) {
 					}
 				}
 
-				collect_styles(pReader, new_element);
+				collect_styles(xml_reader, new_element);
 
-				new_element->configure_presentation_style(parent_stack, device_context, d2d_factory);
+				new_element->configure_presentation_style(parent_stack, device.device_context, device.d2d_factory);
 
 				if (parent_element) {
 					//Add the new element to its parent
@@ -691,7 +628,7 @@ bool SVGUtil::parse(const wchar_t* fileName) {
 				new_element->compute_bbox();
 			}
 		}
-		else if (nodeType == XmlNodeType_Text) {
+		else if (node_type == XmlNodeType_Text) {
 			if (parent_stack.empty()) {
 				return false;
 			}
@@ -712,7 +649,7 @@ bool SVGUtil::parse(const wchar_t* fileName) {
 			const wchar_t* pwszValue = NULL;
 			UINT32 len;
 
-			hr = pReader->GetValue(&pwszValue, &len);
+			hr = xml_reader->GetValue(&pwszValue, &len);
 
 			if (!SUCCEEDED(hr) || pwszValue == nullptr) {
 				return false;
@@ -732,12 +669,12 @@ bool SVGUtil::parse(const wchar_t* fileName) {
 				text_element->text_content.assign(pwszValue, len);
 			}
 
-			hr = dwrite_factory->CreateTextLayout(
+			hr = device.dwrite_factory->CreateTextLayout(
 				text_element->text_content.c_str(),           // The string to be laid out
 				text_element->text_content.size(),     // The length of the string
 				text_element->text_format,    // The initial format (font, size, etc.)
-				device_context->GetSize().width,       // Maximum width of the layout box
-				device_context->GetSize().height,      // Maximum height of the layout box
+				device.device_context->GetSize().width,       // Maximum width of the layout box
+				device.device_context->GetSize().height,      // Maximum height of the layout box
 				&text_element->text_layout    // Output: the resulting IDWriteTextLayout
 			);
 
@@ -776,13 +713,13 @@ bool SVGUtil::parse(const wchar_t* fileName) {
 
 			text_element->bbox.left = text_element->points[0];
 			text_element->bbox.top = text_element->points[1];
-			text_element->bbox.right = text_element->bbox.left + device_context->GetSize().width;
-			text_element->bbox.bottom = text_element->bbox.top + device_context->GetSize().height;
+			text_element->bbox.right = text_element->bbox.left + device.device_context->GetSize().width;
+			text_element->bbox.bottom = text_element->bbox.top + device.device_context->GetSize().height;
 		}
-		else if (nodeType == XmlNodeType_EndElement) {
+		else if (node_type == XmlNodeType_EndElement) {
 			std::wstring_view element_name;
 
-			if (!get_element_name(pReader, element_name)) {
+			if (!get_element_name(xml_reader, element_name)) {
 				return false;
 			}
 
@@ -803,7 +740,78 @@ bool SVGUtil::parse(const wchar_t* fileName) {
 	return true;
 }
 
-void SVGUtil::redraw()
+// Render the loaded bitmap onto the window
+void SVGDevice::render(const SVGImage& image)
+{
+	device_context->BeginDraw();
+	device_context->Clear(D2D1::ColorF(D2D1::ColorF::White));
+
+	if (image.root_element) {
+		//Render the SVG element tree
+		image.root_element->render_tree(device_context);
+	}
+
+	device_context->EndDraw();
+}
+
+void SVGDevice::redraw()
 {
 	InvalidateRect(wnd, NULL, FALSE);
+}
+
+bool SVGDevice::init(HWND _wnd)
+{
+	wnd = _wnd;
+
+	HRESULT hr = D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, &d2d_factory);
+
+	if (!SUCCEEDED(hr)) {
+		return false;
+	}
+
+	hr = DWriteCreateFactory(
+		DWRITE_FACTORY_TYPE_SHARED,
+		__uuidof(IDWriteFactory),
+		reinterpret_cast<IUnknown**>(&dwrite_factory)
+	);
+
+	if (!SUCCEEDED(hr)) {
+		return false;
+	}
+
+	// Create Render Target
+	RECT rc;
+
+	GetClientRect(_wnd, &rc);
+
+	hr = d2d_factory->CreateHwndRenderTarget(
+		D2D1::RenderTargetProperties(),
+		D2D1::HwndRenderTargetProperties(
+			_wnd,
+			D2D1::SizeU(rc.right - rc.left, rc.bottom - rc.top)
+		),
+		&render_target
+	);
+
+	if (!SUCCEEDED(hr)) {
+		return false;
+	}
+
+	//Get the device context from the render target
+	hr = render_target->QueryInterface(IID_PPV_ARGS(&device_context));
+
+	if (!SUCCEEDED(hr)) {
+		return false;
+	}
+
+	return true;
+}
+
+// Resize the render target when the window size changes
+void SVGDevice::resize()
+{
+	RECT rc;
+
+	GetClientRect(wnd, &rc);
+	render_target->Resize(D2D1::SizeU(rc.right - rc.left, rc.bottom - rc.top));
 }

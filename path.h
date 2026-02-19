@@ -5,5 +5,5 @@ struct SVGPathElement : public SVGGraphicsElement {
 
 	void build_path(ID2D1Factory* d2d_factory, const std::wstring_view& pathData);
 	void compute_bbox() override;
-	void render(ID2D1DeviceContext* pContext) override;
+	void render(ID2D1DeviceContext* pContext) const override;
 };

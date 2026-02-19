@@ -8,7 +8,7 @@ void SVGRectElement::compute_bbox() {
 	bbox.bottom = points[1] + points[3];
 }
 
-void SVGRectElement::render(ID2D1DeviceContext* pContext) {
+void SVGRectElement::render(ID2D1DeviceContext* pContext) const {
 	if (fill_brush) {
 		if (points.size() == 4) {
 			pContext->FillRectangle(
