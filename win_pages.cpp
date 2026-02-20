@@ -29,7 +29,7 @@ class MainWindow : public CFrame {
 public:
     
     void create() {
-        CFrame::create("Image Viewer", 800, 600, IDC_WINPAGES);
+        CFrame::create(L"SVG Viewer", 800, 600, IDC_WINPAGES);
 
 		device.init(getWindow());
     }
@@ -50,7 +50,7 @@ public:
 				device.redraw();
             }
             else {
-				errorBox("Failed to open or parse the SVG file.");
+				errorBox(L"Failed to open or parse the SVG file.");
             }
         }
         else if (id == IDM_EXIT) {
