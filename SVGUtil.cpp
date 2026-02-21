@@ -13,6 +13,12 @@
 #include "text.h"
 #include "utils.h"
 
+#ifdef DEBUG
+#define DEBUG_OUT(x) {std::wstringstream ws; ws << x << std::endl; OutputDebugStringW(ws.str().c_str());}
+#else
+#define DBG_OUT(x)
+#endif
+
 void SVGImage::clear() {
 	id_map.clear();
 	defs_map.clear();
@@ -20,15 +26,13 @@ void SVGImage::clear() {
 }
 
 void SVGGraphicsElement::render_tree(const SVGDevice& device) const {
-	OutputDebugStringW(L"Rendering element: ");
-	OutputDebugStringW(tag_name.c_str());
-	OutputDebugStringW(L"\n");
+	DEBUG_OUT(L"Rendering element: " << tag_name);
 
 	//Save the old transform
 	D2D1_MATRIX_3X2_F oldTransform;
 
 	if (combined_transform) {
-		OutputDebugStringW(L"Applying transform\n");
+		DEBUG_OUT(L"Applying transform");
 		device.device_context->GetTransform(&oldTransform);
 
 		auto totalTransform = combined_transform.value() * oldTransform;
@@ -44,7 +48,7 @@ void SVGGraphicsElement::render_tree(const SVGDevice& device) const {
 	}
 
 	if (combined_transform) {
-		OutputDebugStringW(L"Restoring transform\n");
+		DEBUG_OUT(L"Restoring transform");
 		device.device_context->SetTransform(oldTransform);
 	}
 }
@@ -606,11 +610,7 @@ bool SVG::parse(const wchar_t* file_name, const SVGDevice& device, SVGImage& ima
 
 				if (parent_element) {
 					//Add the new element to its parent
-					OutputDebugStringW(L"Parent::Child: ");
-					OutputDebugStringW(parent_element->tag_name.c_str());
-					OutputDebugStringW(L"::");
-					OutputDebugStringW(element_name.data());
-					OutputDebugStringW(L"\n");
+					DEBUG_OUT(L"Parent::Child: " << parent_element->tag_name << L"::" << element_name);
 
 					parent_element->children.push_back(new_element);
 				}
@@ -723,9 +723,7 @@ bool SVG::parse(const wchar_t* file_name, const SVGDevice& device, SVGImage& ima
 				return false;
 			}
 
-			OutputDebugStringW(L"End Element: ");
-			OutputDebugStringW(element_name.data());
-			OutputDebugStringW(L"\n");
+			DEBUG_OUT(L"End Element: " << element_name);
 
 			if (!parent_stack.empty()) {
 				//Now that all children are added
