@@ -1,6 +1,7 @@
 #pragma once
 struct SVGLinearGradientElement : public SVGGraphicsElement
 {
+	std::wstring gradient_units = L"objectBoundingBox"; // or "userSpaceOnUse"
 };
 
 struct SVGStopElement : public SVGGraphicsElement

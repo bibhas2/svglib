@@ -39,9 +39,13 @@ CComPtr<ID2D1LinearGradientBrush> create_linear_gradient_brush(const SVGDevice& 
 	float y2 = linear_gradient.points[3];
 	float width = element.bbox.right - element.bbox.left;
 	float height = element.bbox.bottom - element.bbox.top;
-
 	auto start_point = D2D1::Point2F(element.bbox.left + x1 * width, element.bbox.top + y1 * height);
 	auto end_point = D2D1::Point2F(element.bbox.left + x2 * width, element.bbox.top + y2 * height);
+
+	if (linear_gradient.gradient_units == L"userSpaceOnUse") {
+		start_point = D2D1::Point2F(x1, y1);
+		end_point = D2D1::Point2F(x2, y2);
+	}
 
 	hr = device.device_context->CreateLinearGradientBrush(
 		D2D1::LinearGradientBrushProperties(start_point, end_point),

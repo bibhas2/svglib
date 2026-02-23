@@ -164,9 +164,9 @@ void collect_styles(IXmlReader* pReader, SVGImage& image, std::shared_ptr<SVGGra
 		std::wstring_view gradient_ref_id;
 
 		if (get_href_id(style_value, gradient_ref_id)) {
-			auto gradient_it = image.defs_map.find(std::wstring(gradient_ref_id));
+			auto gradient_it = image.id_map.find(std::wstring(gradient_ref_id));
 
-			if (gradient_it != image.defs_map.end()) {
+			if (gradient_it != image.id_map.end()) {
 				new_element->fill_gradient = gradient_it->second;
 			}
 		}
@@ -630,6 +630,10 @@ bool SVG::parse(const wchar_t* file_name, const SVGDevice& device, SVGImage& ima
 				linear_gradient->points.push_back(x2);
 				linear_gradient->points.push_back(y2);
 
+				if (get_attribute(xml_reader, L"gradientUnits", attr_value)) {
+					linear_gradient->gradient_units = attr_value;
+				}
+
 				new_element = linear_gradient;
 			}
 			else if (element_name == L"stop") {
@@ -640,10 +644,13 @@ bool SVG::parse(const wchar_t* file_name, const SVGDevice& device, SVGImage& ima
 				float stop_opacity = 1.0f;
 
 				get_size_attribute(xml_reader, device.device_context, L"offset", offset);
-				get_size_attribute(xml_reader, device.device_context, L"stop-opacity", stop_opacity);
 
 				if (get_attribute(xml_reader, L"stop-color", attr_value)) {
 					get_css_color(attr_value, stop_color.r, stop_color.g, stop_color.b, stop_color.a);
+				}
+
+				if (get_size_attribute(xml_reader, device.device_context, L"stop-opacity", stop_opacity)) {
+					stop_color.a = 255 * stop_opacity;
 				}
 
 				stop_element->offset = offset;
