@@ -466,18 +466,19 @@ bool SVG::parse(const wchar_t* file_name, const SVGDevice& device, SVGImage& ima
 				apply_viewbox(device.device_context, new_element, xml_reader);
 			}
 			else if (element_name == L"rect") {
-				float x, y, width, height, rx, ry;
-				if (get_size_attribute(xml_reader, device.device_context, L"x", x) &&
-					get_size_attribute(xml_reader, device.device_context, L"y", y) &&
-					get_size_attribute(xml_reader, device.device_context, L"width", width) &&
-					get_size_attribute(xml_reader, device.device_context, L"height", height)) {
-					new_element = std::make_shared<SVGRectElement>();
+				float x = 0.0f, y = 0.0f, width = 0.0f, height = 0.0f, rx = 0.0f, ry = 0.0f;
 
-					new_element->points.push_back(x);
-					new_element->points.push_back(y);
-					new_element->points.push_back(width);
-					new_element->points.push_back(height);
-				}
+				get_size_attribute(xml_reader, device.device_context, L"x", x);
+				get_size_attribute(xml_reader, device.device_context, L"y", y);
+				get_size_attribute(xml_reader, device.device_context, L"width", width);
+				get_size_attribute(xml_reader, device.device_context, L"height", height);
+
+				new_element = std::make_shared<SVGRectElement>();
+
+				new_element->points.push_back(x);
+				new_element->points.push_back(y);
+				new_element->points.push_back(width);
+				new_element->points.push_back(height);
 
 				bool has_rx = get_size_attribute(xml_reader, device.device_context, L"rx", rx);
 				bool has_ry = get_size_attribute(xml_reader, device.device_context, L"ry", ry);
@@ -495,20 +496,19 @@ bool SVG::parse(const wchar_t* file_name, const SVGDevice& device, SVGImage& ima
 				}
 			}
 			else if (element_name == L"circle") {
-				float cx, cy, r;
+				float cx = 0.0f, cy = 0.0f, r = 0.0f;
 
-				if (get_size_attribute(xml_reader, device.device_context, L"cx", cx) &&
-					get_size_attribute(xml_reader, device.device_context, L"cy", cy) &&
-					get_size_attribute(xml_reader, device.device_context, L"r", r)) {
-					
-					auto circle_element = std::make_shared<SVGCircleElement>();
+				get_size_attribute(xml_reader, device.device_context, L"cx", cx);
+				get_size_attribute(xml_reader, device.device_context, L"cy", cy);
+				get_size_attribute(xml_reader, device.device_context, L"r", r);
 
-					circle_element->points.push_back(cx);
-					circle_element->points.push_back(cy);
-					circle_element->points.push_back(r);
+				auto circle_element = std::make_shared<SVGCircleElement>();
 
-					new_element = circle_element;
-				}
+				circle_element->points.push_back(cx);
+				circle_element->points.push_back(cy);
+				circle_element->points.push_back(r);
+
+				new_element = circle_element;
 			}
 			else if (element_name == L"ellipse") {
 				float cx, cy, rx, ry;
