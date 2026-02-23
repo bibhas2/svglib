@@ -2,6 +2,14 @@
 #include "path.h"
 #include <sstream>
 
+SVGPathElement::SVGPathElement(const SVGPathElement& that) :
+	SVGGraphicsElement(that),
+	path_geometry(that.path_geometry) {
+}
+
+std::shared_ptr<SVGGraphicsElement> SVGPathElement::clone() const {
+	return std::make_shared<SVGPathElement>(*this);
+}
 
 void SVGPathElement::build_path(ID2D1Factory* d2d_factory, const std::wstring_view& pathData) {
 	d2d_factory->CreatePathGeometry(&path_geometry);

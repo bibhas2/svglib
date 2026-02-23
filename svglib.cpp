@@ -25,6 +25,24 @@ void SVGImage::clear() {
 	root_element = nullptr;
 }
 
+SVGGraphicsElement::SVGGraphicsElement(const SVGGraphicsElement& that) 
+    : tag_name(that.tag_name),
+	points(that.points),
+	children(that.children),
+	stroke_width(that.stroke_width),
+	fill_brush(that.fill_brush),
+	stroke_brush(that.stroke_brush),
+	stroke_style(that.stroke_style),
+	combined_transform(that.combined_transform),
+	styles(that.styles),
+	bbox(that.bbox) {
+
+}
+
+std::shared_ptr<SVGGraphicsElement> SVGGraphicsElement::clone() const { 
+	return std::make_shared<SVGGraphicsElement>(*this); 
+}
+
 void SVGGraphicsElement::render_tree(const SVGDevice& device) const {
 	DEBUG_OUT(L"Rendering element: " << tag_name);
 
@@ -566,9 +584,17 @@ bool SVG::parse(const wchar_t* file_name, const SVGDevice& device, SVGImage& ima
 					auto it = image.defs_map.find(std::wstring(attr_value));
 
 					if (it != image.defs_map.end()) {
-						//TBD: Clone the referred element
-						new_element = it->second;
+						//Clone the referred element
+						new_element = it->second->clone();
 					}
+				}
+
+				//Deal with bad references by creating an empty element.
+				//This way we can at least render something instead of crashing.
+				// Skipping the element entirely will have other consequences down the line
+				// such as processing the end tag.
+				if (!new_element) {
+					new_element = std::make_shared<SVGGraphicsElement>();
 				}
 			}
 			else {

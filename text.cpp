@@ -3,6 +3,18 @@
 #include "utils.h"
 #include <sstream>
 
+SVGTextElement::SVGTextElement(const SVGTextElement& that) :
+	SVGGraphicsElement(that),
+	text_content(that.text_content),
+	text_format(that.text_format),
+	text_layout(that.text_layout),
+	baseline(that.baseline) {
+}
+
+std::shared_ptr<SVGGraphicsElement> SVGTextElement::clone() const {
+	return std::make_shared<SVGTextElement>(*this);
+}
+
 CComPtr<IDWriteTextFormat> build_text_format(IDWriteFactory* dwrite_factory, std::wstring_view family, std::wstring_view weight, std::wstring_view style, float size) {
 	CComPtr<IDWriteTextFormat> tfmt;
 	//Split the family string by commas and try to find the first installed font

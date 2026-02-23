@@ -12,7 +12,7 @@
   </g>
 
   <g stroke-linecap="round" transform="translate(20 60)">
-    <use href="#myPath"/>
+    <use href="#myPath" stroke="green"/>
   </g>
   <g stroke-linecap="round" transform="translate(20 100)">
     <use href="#badRef"/>
