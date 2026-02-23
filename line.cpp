@@ -1,4 +1,4 @@
-#include "SVGUtil.h"
+#include "svglib.h"
 #include "line.h"
 
 void SVGLineElement::compute_bbox() {

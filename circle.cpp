@@ -1,4 +1,4 @@
-#include "SVGUtil.h"
+#include "svglib.h"
 #include "circle.h"
 
 void SVGCircleElement::compute_bbox() {

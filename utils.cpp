@@ -1,4 +1,4 @@
-#include "SVGUtil.h"
+#include "svglib.h"
 #include "utils.h"
 #include <sstream>
 

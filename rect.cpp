@@ -1,4 +1,4 @@
-#include "SVGUtil.h"
+#include "svglib.h"
 #include "rect.h"
 
 void SVGRectElement::compute_bbox() {

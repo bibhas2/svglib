@@ -1,4 +1,4 @@
-#include "SVGUtil.h"
+#include "svglib.h"
 #include "ellipse.h"
 
 void SVGEllipseElement::compute_bbox() {

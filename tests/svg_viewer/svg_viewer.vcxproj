@@ -21,8 +21,8 @@
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
-    <ProjectGuid>{83480ead-3111-456c-a64a-e92319ab9597}</ProjectGuid>
-    <RootNamespace>winpages</RootNamespace>
+    <ProjectGuid>{9477371e-dc64-4d53-b2da-c6266de49d61}</ProjectGuid>
+    <RootNamespace>svgviewer</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -70,12 +70,6 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);../mgui/include</IncludePath>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);../mgui/include</IncludePath>
-  </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
@@ -87,7 +81,6 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>$(CoreLibraryDependencies);%(AdditionalDependencies);comctl32.lib;gdi32.lib;comdlg32.lib</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -115,7 +108,6 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>$(CoreLibraryDependencies);%(AdditionalDependencies);comctl32.lib;gdi32.lib;comdlg32.lib</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -133,44 +125,27 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="circle.h" />
-    <ClInclude Include="defs.h" />
-    <ClInclude Include="ellipse.h" />
     <ClInclude Include="framework.h" />
-    <ClInclude Include="g.h" />
-    <ClInclude Include="line.h" />
-    <ClInclude Include="path.h" />
-    <ClInclude Include="rect.h" />
     <ClInclude Include="Resource.h" />
-    <ClInclude Include="SVGUtil.h" />
+    <ClInclude Include="svg_viewer.h" />
     <ClInclude Include="targetver.h" />
-    <ClInclude Include="text.h" />
-    <ClInclude Include="utils.h" />
-    <ClInclude Include="win_pages.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="circle.cpp" />
-    <ClCompile Include="defs.cpp" />
-    <ClCompile Include="ellipse.cpp" />
-    <ClCompile Include="g.cpp" />
-    <ClCompile Include="line.cpp" />
-    <ClCompile Include="path.cpp" />
-    <ClCompile Include="rect.cpp" />
-    <ClCompile Include="SVGUtil.cpp" />
-    <ClCompile Include="text.cpp" />
-    <ClCompile Include="utils.cpp" />
-    <ClCompile Include="win_pages.cpp" />
+    <ClCompile Include="svg_viewer.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="win_pages.rc" />
+    <ResourceCompile Include="svg_viewer.rc" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="small.ico" />
-    <Image Include="win_pages.ico" />
+    <Image Include="svg_viewer.ico" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\mgui\mgui.vcxproj">
+    <ProjectReference Include="..\..\..\mgui\mgui.vcxproj">
       <Project>{6755c2d9-99e4-4734-a340-df0e83f30ad9}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\..\svglib.vcxproj">
+      <Project>{28f98c70-55e1-4dc4-9268-802a756ddc44}</Project>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

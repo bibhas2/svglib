@@ -2,7 +2,7 @@
 #include <string_view>
 #include <stack>
 #include <xmllite.h>
-#include "SVGUtil.h"
+#include "svglib.h"
 #include "defs.h"
 #include "ellipse.h"
 #include "g.h"
@@ -16,7 +16,7 @@
 #ifdef DEBUG
 #define DEBUG_OUT(x) {std::wstringstream ws; ws << x << std::endl; OutputDebugStringW(ws.str().c_str());}
 #else
-#define DBG_OUT(x)
+#define DEBUG_OUT(x)
 #endif
 
 void SVGImage::clear() {

@@ -1,4 +1,4 @@
-#include "SVGUtil.h"
+#include "svglib.h"
 #include "defs.h"
 
 //Defs tree doesn't render
