@@ -588,14 +588,6 @@ bool SVG::parse(const wchar_t* file_name, const SVGDevice& device, SVGImage& ima
 						new_element = it->second->clone();
 					}
 				}
-
-				//Deal with bad references by creating an empty element.
-				//This way we can at least render something instead of crashing.
-				// Skipping the element entirely will have other consequences down the line
-				// such as processing the end tag.
-				if (!new_element) {
-					new_element = std::make_shared<SVGGraphicsElement>();
-				}
 			}
 			else {
 				//Unknown element
@@ -651,7 +643,9 @@ bool SVG::parse(const wchar_t* file_name, const SVGDevice& device, SVGImage& ima
 			}
 			else {
 				//This is the end of the element
-				new_element->compute_bbox();
+				if (new_element) {
+					new_element->compute_bbox();
+				}
 			}
 		}
 		else if (node_type == XmlNodeType_Text) {
