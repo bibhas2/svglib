@@ -169,6 +169,10 @@ bool get_href_id(IXmlReader* xml_reader, std::wstring_view& ref_id) {
 		return false;
 	}
 
+	return get_href_id(source, ref_id);
+}
+
+bool get_href_id(std::wstring_view source, std::wstring_view& ref_id) {
 	if (source.find(L"url") != std::wstring_view::npos) {
 		size_t start = source.find(L"(");
 		size_t end = source.rfind(L")");
@@ -241,6 +245,11 @@ bool get_size_value(ID2D1DeviceContext* pContext, const std::wstring_view& sourc
 		}
 		else if (unit == L"pc") {
 			size *= dpi / 6.0f; //Picas to pixels
+		} else if (unit == L"%") {
+			size = size / 100.0f;
+		}
+		else {
+			return false; //Unknown unit
 		}
 
 		return true;

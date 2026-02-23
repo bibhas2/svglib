@@ -26,7 +26,8 @@ struct SVGDevice
 struct SVGGraphicsElement {
 	std::wstring tag_name;
 	float stroke_width = 1.0f;
-	CComPtr<ID2D1SolidColorBrush> fill_brush;
+	CComPtr<ID2D1Brush> fill_brush;
+	std::shared_ptr<SVGGraphicsElement> fill_gradient;
 	CComPtr<ID2D1SolidColorBrush> stroke_brush;
 	CComPtr<ID2D1StrokeStyle> stroke_style;
 	std::vector<std::shared_ptr<SVGGraphicsElement>> children;

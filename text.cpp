@@ -124,4 +124,54 @@ void SVGTextElement::create_presentation_assets(const std::vector<std::shared_pt
 		font_style,
 		fontSize
 	);
+
+	HRESULT hr = device.dwrite_factory->CreateTextLayout(
+		text_content.c_str(),           // The string to be laid out
+		text_content.size(),     // The length of the string
+		text_format,    // The initial format (font, size, etc.)
+		device.device_context->GetSize().width,       // Maximum width of the layout box
+		device.device_context->GetSize().height,      // Maximum height of the layout box
+		&text_layout    // Output: the resulting IDWriteTextLayout
+	);
+
+	if (!SUCCEEDED(hr)) {
+		return;
+	}
+
+	// To prevent wrapping and force it to stay on one line:
+	text_layout->SetWordWrapping(DWRITE_WORD_WRAPPING_NO_WRAP);
+
+	//Get the font baseline
+	UINT32 lineCount = 0;
+
+	//First get the line count
+	hr = text_layout->GetLineMetrics(nullptr, 0, &lineCount);
+
+	if (!SUCCEEDED(hr) && hr != HRESULT_FROM_WIN32(ERROR_INSUFFICIENT_BUFFER)) {
+		return;
+	}
+
+	if (lineCount == 0) {
+		//Nothing there
+		return;
+	}
+
+	//Allocate memory for metrics
+	std::vector<DWRITE_LINE_METRICS> lineMetrics(lineCount);
+
+	hr = text_layout->GetLineMetrics(lineMetrics.data(), lineMetrics.size(), &lineCount);
+
+	if (!SUCCEEDED(hr)) {
+		return;
+	}
+
+	baseline = lineMetrics[0].baseline;
+}
+
+void SVGTextElement::compute_bbox() {
+	bbox.left = points[0];
+	bbox.top = points[1];
+	//TBD Fix the width and height
+	bbox.right = bbox.left + 600;
+	bbox.bottom = bbox.top + 200;
 }

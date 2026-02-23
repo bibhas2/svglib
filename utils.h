@@ -14,6 +14,7 @@ std::vector<std::wstring_view> split_string(std::wstring_view source, std::wstri
 bool get_css_color(std::wstring_view source, float& r, float& g, float& b, float& a);
 bool get_attribute(IXmlReader* xml_reader, const wchar_t* attr_name, std::wstring_view& attr_value);
 bool get_href_id(IXmlReader* xml_reader, std::wstring_view& ref_id);
+bool get_href_id(std::wstring_view source, std::wstring_view& ref_id);
 bool get_size_value(ID2D1DeviceContext* pContext, const std::wstring_view& source, float& size);
 bool get_size_attribute(IXmlReader* xml_reader, ID2D1DeviceContext* device_context, const wchar_t* attr_name, float& size);
 bool get_transform_functions(const std::wstring_view& source, std::vector<TransformFunction>& functions);

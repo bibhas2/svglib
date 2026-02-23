@@ -11,6 +11,7 @@
 #include "rect.h"
 #include "circle.h"
 #include "text.h"
+#include "linear-gradient.h"
 #include "utils.h"
 
 #ifdef DEBUG
@@ -123,7 +124,7 @@ void parse_css_style_string(std::wstring_view styleStr, std::map<std::wstring, s
 }
 
 //Normalizes style from both the "style" attribute and presentation attributes like "fill", "stroke", etc.
-void collect_styles(IXmlReader* pReader, std::shared_ptr<SVGGraphicsElement>& new_element) {
+void collect_styles(IXmlReader* pReader, SVGImage& image, std::shared_ptr<SVGGraphicsElement>& new_element) {
 	std::wstring_view style_str;
 
 	if (get_attribute(pReader, L"style", style_str)) {
@@ -150,6 +151,24 @@ void collect_styles(IXmlReader* pReader, std::shared_ptr<SVGGraphicsElement>& ne
 
 		if (get_attribute(pReader, attr_name, attr_value)) {
 			new_element->styles[std::wstring(attr_name)] = std::wstring(attr_value);
+		}
+	}
+
+	//Fill gradient brush depends on the geometry of the object
+	//where it is applied. We can't create the brush here yet, so we
+	//keep the reference to the gradient.
+	auto it = new_element->styles.find(L"fill");
+
+	if (it != new_element->styles.end()) {
+		std::wstring_view style_value = it->second;
+		std::wstring_view gradient_ref_id;
+
+		if (get_href_id(style_value, gradient_ref_id)) {
+			auto gradient_it = image.defs_map.find(std::wstring(gradient_ref_id));
+
+			if (gradient_it != image.defs_map.end()) {
+				new_element->fill_gradient = gradient_it->second;
+			}
 		}
 	}
 }
@@ -328,9 +347,16 @@ void SVGGraphicsElement::create_presentation_assets(const std::vector<std::share
 
 	//Get fill
 	get_style_computed(parent_stack, L"fill", style_value, L"black");
+	std::wstring_view gradient_ref_id;
 
 	if (style_value == L"none") {
 		this->fill_brush = nullptr;
+	} else if (fill_gradient) {
+		auto linear_gradient = std::dynamic_pointer_cast<SVGLinearGradientElement>(fill_gradient);
+
+		if (linear_gradient) {
+			this->fill_brush = create_linear_gradient_brush(device, *linear_gradient, *this);
+		}
 	}
 	else {
 		float r, g, b, a;
@@ -589,6 +615,43 @@ bool SVG::parse(const wchar_t* file_name, const SVGDevice& device, SVGImage& ima
 					}
 				}
 			}
+			else if (element_name == L"linearGradient") {
+				auto linear_gradient = std::make_shared<SVGLinearGradientElement>();
+
+				float x1 = 0, y1 = 0, x2 = 1.0, y2 = 0;
+
+				get_size_attribute(xml_reader, device.device_context, L"x1", x1);
+				get_size_attribute(xml_reader, device.device_context, L"y1", y1);
+				get_size_attribute(xml_reader, device.device_context, L"x2", x2);
+				get_size_attribute(xml_reader, device.device_context, L"y2", y2);
+
+				linear_gradient->points.push_back(x1);
+				linear_gradient->points.push_back(y1);
+				linear_gradient->points.push_back(x2);
+				linear_gradient->points.push_back(y2);
+
+				new_element = linear_gradient;
+			}
+			else if (element_name == L"stop") {
+				auto stop_element = std::make_shared<SVGStopElement>();
+
+				float offset = 0;
+				D2D1::ColorF stop_color = D2D1::ColorF(D2D1::ColorF::Black);
+				float stop_opacity = 1.0f;
+
+				get_size_attribute(xml_reader, device.device_context, L"offset", offset);
+				get_size_attribute(xml_reader, device.device_context, L"stop-opacity", stop_opacity);
+
+				if (get_attribute(xml_reader, L"stop-color", attr_value)) {
+					get_css_color(attr_value, stop_color.r, stop_color.g, stop_color.b, stop_color.a);
+				}
+
+				stop_element->offset = offset;
+				stop_element->stop_color = stop_color;
+				stop_element->stop_opacity = stop_opacity;
+
+				new_element = stop_element;
+			}
 			else {
 				//Unknown element
 				new_element = std::make_shared<SVGGraphicsElement>();
@@ -622,9 +685,7 @@ bool SVG::parse(const wchar_t* file_name, const SVGDevice& device, SVGImage& ima
 					}
 				}
 
-				collect_styles(xml_reader, new_element);
-
-				new_element->create_presentation_assets(parent_stack, device);
+				collect_styles(xml_reader, image, new_element);
 
 				if (parent_element) {
 					//Add the new element to its parent
@@ -634,18 +695,18 @@ bool SVG::parse(const wchar_t* file_name, const SVGDevice& device, SVGImage& ima
 				}
 			}
 
-			//Do not add self closing elements like <circle .../> to the parent stack
-			if (!is_self_closing)
-			{
+			if (is_self_closing) {
+				//This is the end of the element
+
+				if (new_element) {
+					new_element->compute_bbox();
+					new_element->create_presentation_assets(parent_stack, device);
+				}
+			}
+			else {
 				//Push the new element onto the stack
 				//This may be null if the element is not supported
 				parent_stack.push_back(new_element);
-			}
-			else {
-				//This is the end of the element
-				if (new_element) {
-					new_element->compute_bbox();
-				}
 			}
 		}
 		else if (node_type == XmlNodeType_Text) {
@@ -688,53 +749,6 @@ bool SVG::parse(const wchar_t* file_name, const SVGDevice& device, SVGImage& ima
 			else {
 				text_element->text_content.assign(pwszValue, len);
 			}
-
-			hr = device.dwrite_factory->CreateTextLayout(
-				text_element->text_content.c_str(),           // The string to be laid out
-				text_element->text_content.size(),     // The length of the string
-				text_element->text_format,    // The initial format (font, size, etc.)
-				device.device_context->GetSize().width,       // Maximum width of the layout box
-				device.device_context->GetSize().height,      // Maximum height of the layout box
-				&text_element->text_layout    // Output: the resulting IDWriteTextLayout
-			);
-
-			if (!SUCCEEDED(hr)) {
-				return false;
-			}
-
-			// To prevent wrapping and force it to stay on one line:
-			text_element->text_layout->SetWordWrapping(DWRITE_WORD_WRAPPING_NO_WRAP);
-
-			//Get the font baseline
-			UINT32 lineCount = 0;
-
-			//First get the line count
-			hr = text_element->text_layout->GetLineMetrics(nullptr, 0, &lineCount);
-
-			if (!SUCCEEDED(hr) && hr != HRESULT_FROM_WIN32(ERROR_INSUFFICIENT_BUFFER)) {
-				return false;
-			}
-
-			if (lineCount == 0) {
-				//Nothing there
-				return false;
-			}
-
-			//Allocate memory for metrics
-			std::vector<DWRITE_LINE_METRICS> lineMetrics(lineCount);
-
-			hr = text_element->text_layout->GetLineMetrics(lineMetrics.data(), lineMetrics.size(), &lineCount);
-
-			if (!SUCCEEDED(hr)) {
-				return false;
-			}
-
-			text_element->baseline = lineMetrics[0].baseline;
-
-			text_element->bbox.left = text_element->points[0];
-			text_element->bbox.top = text_element->points[1];
-			text_element->bbox.right = text_element->bbox.left + device.device_context->GetSize().width;
-			text_element->bbox.bottom = text_element->bbox.top + device.device_context->GetSize().height;
 		}
 		else if (node_type == XmlNodeType_EndElement) {
 			std::wstring_view element_name;
@@ -748,9 +762,14 @@ bool SVG::parse(const wchar_t* file_name, const SVGDevice& device, SVGImage& ima
 			if (!parent_stack.empty()) {
 				//Now that all children are added
 				//we can calculate bbox.
-				parent_stack.back()->compute_bbox();
+				auto element = parent_stack.back();
 
 				parent_stack.pop_back();
+
+				if (element) {
+					element->compute_bbox();
+					element->create_presentation_assets(parent_stack, device);
+				}
 			}
 		}
 	}
