@@ -1,5 +1,26 @@
 #include "svglib.h"
 #include "gradient.h"
+#include "utils.h"
+
+void SVGStopElement::create_presentation_assets(const std::vector<std::shared_ptr<SVGGraphicsElement>>& parent_stack, const std::map<std::wstring, std::shared_ptr<SVGGraphicsElement>>& id_map, const SVGDevice& device) {
+	SVGGraphicsElement::create_presentation_assets(parent_stack, id_map, device);
+
+	std::wstring stop_color_str;
+
+	if (get_style_computed(parent_stack, L"stop-color", stop_color_str)) {
+		get_css_color(stop_color_str, stop_color.r, stop_color.g, stop_color.b, stop_color.a);
+	}
+
+	std::wstring stop_opacity_str = L"1.0";
+
+	if (get_style_computed(parent_stack, L"stop-opacity", stop_opacity_str)) {
+		float stop_opacity = 1.0f;
+
+		if (get_size_value(device.device_context, stop_opacity_str, stop_opacity)) {
+			stop_color.a = 255 * stop_opacity;
+		}
+	}
+}
 
 CComPtr<ID2D1GradientStopCollection> create_gradient_stop_collection(const SVGDevice& device, const SVGGraphicsElement& element) {
 	std::vector<D2D1_GRADIENT_STOP> stops;

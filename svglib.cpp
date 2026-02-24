@@ -138,6 +138,8 @@ void collect_styles(IXmlReader* pReader, SVGImage& image, std::shared_ptr<SVGGra
 		L"stroke-linejoin",
 		L"stroke-miterlimit",
 		L"stroke", 
+		L"stop-color",
+		L"stop-opacity",
 		L"stroke-width", 
 		L"font-family", 
 		L"font-size", 
@@ -766,22 +768,10 @@ bool SVG::parse(const wchar_t* file_name, const SVGDevice& device, SVGImage& ima
 				auto stop_element = std::make_shared<SVGStopElement>();
 
 				float offset = 0;
-				D2D1::ColorF stop_color = D2D1::ColorF(D2D1::ColorF::Black);
-				float stop_opacity = 1.0f;
 
 				get_size_attribute(xml_reader, device.device_context, L"offset", offset);
 
-				if (get_attribute(xml_reader, L"stop-color", attr_value)) {
-					get_css_color(attr_value, stop_color.r, stop_color.g, stop_color.b, stop_color.a);
-				}
-
-				if (get_size_attribute(xml_reader, device.device_context, L"stop-opacity", stop_opacity)) {
-					stop_color.a = 255 * stop_opacity;
-				}
-
 				stop_element->offset = offset;
-				stop_element->stop_color = stop_color;
-				stop_element->stop_opacity = stop_opacity;
 
 				new_element = stop_element;
 			}
