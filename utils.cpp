@@ -109,21 +109,34 @@ bool get_css_color(std::wstring_view source, float& r, float& g, float& b, float
 		}
 	}
 
-	//Parse #RRGGBBAA color from the source
-	if (source.length() < 7 || source[0] != L'#') {
+	//Parse  color from the source. Possible formats are #RGB, #RGBA, #RRGGBB, #RRGGBBAA
+
+	if ((source.length() != 4 && source.length() != 5 && source.length() != 7 && source.length() != 9) || source[0] != L'#') {
 		return false;
 	}
 
-	std::wstring r_str(source.substr(1, 2));
-	std::wstring g_str(source.substr(3, 2));
-	std::wstring b_str(source.substr(5, 2));
+	size_t start = 1;
+	size_t len = 0;
+
+	if (source.length() == 4 || source.length() == 5) {
+		//#RGB, #RGBA
+		len = 1;
+	}
+	else {
+		//#RRGGBB, #RRGGBBAA
+		len = 2;
+	}
+
+	std::wstring r_str(source.substr(start, len)); start += len;
+	std::wstring g_str(source.substr(start, len)); start += len;
+	std::wstring b_str(source.substr(start, len)); start += len;
 
 	r = static_cast<float>(std::stoul(r_str, nullptr, 16)) / 255.0f;
 	g = static_cast<float>(std::stoul(g_str, nullptr, 16)) / 255.0f;
 	b = static_cast<float>(std::stoul(b_str, nullptr, 16)) / 255.0f;
 
-	if (source.length() == 9) {
-		std::wstring a_str(source.substr(7, 2));
+	if (source.length() == 9 || source.length() == 5) {
+		std::wstring a_str(source.substr(start, len));
 
 		a = static_cast<float>(std::stoul(a_str, nullptr, 16)) / 255.0f;
 	}
