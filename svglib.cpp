@@ -12,7 +12,7 @@
 #include "circle.h"
 #include "text.h"
 #include "use.h"
-#include "linear-gradient.h"
+#include "gradient.h"
 #include "utils.h"
 
 #ifdef DEBUG
@@ -271,9 +271,13 @@ void SVGGraphicsElement::create_presentation_assets(const std::vector<std::share
 
 			if (it != id_map.end()) {
 				auto linear_gradient = std::dynamic_pointer_cast<SVGLinearGradientElement>(it->second);
+				auto radial_gradient = std::dynamic_pointer_cast<SVGRadialGradientElement>(it->second);
 
 				if (linear_gradient) {
 					this->stroke_brush = create_linear_gradient_brush(device, *linear_gradient, *this);
+				} 
+				else if (radial_gradient) {
+					this->stroke_brush = create_radial_gradient_brush(device, *radial_gradient, *this);
 				}
 			}
 		}
@@ -365,9 +369,12 @@ void SVGGraphicsElement::create_presentation_assets(const std::vector<std::share
 
 		if (it != id_map.end()) {
 			auto linear_gradient = std::dynamic_pointer_cast<SVGLinearGradientElement>(it->second);
+			auto radial_gradient = std::dynamic_pointer_cast<SVGRadialGradientElement>(it->second);
 
 			if (linear_gradient) {
 				this->fill_brush = create_linear_gradient_brush(device, *linear_gradient, *this);
+			} else if (radial_gradient) {
+				this->fill_brush = create_radial_gradient_brush(device, *radial_gradient, *this);
 			}
 		}
 	}
@@ -428,7 +435,7 @@ void resolve_href(const std::shared_ptr<SVGGraphicsElement>& element,
 				auto id_it = id_map.find(gradient_element->href_id);
 
 				if (id_it != id_map.end()) {
-					referenced_element = std::dynamic_pointer_cast<SVGGraphicsElement>(id_it->second);
+					referenced_element = std::dynamic_pointer_cast<SVGLinearGradientElement>(id_it->second);
 
 					if (referenced_element) {
 						//TBD: We should only copy from template attributes not defined on the gradient element itself. 
@@ -437,6 +444,25 @@ void resolve_href(const std::shared_ptr<SVGGraphicsElement>& element,
 				}
 			}
 		}
+		else if (child->tag_name == L"radialGradient") {
+			//Cast to radial gradient element to get the id
+			auto gradient_element = std::dynamic_pointer_cast<SVGRadialGradientElement>(child);
+
+			if (gradient_element && !gradient_element->href_id.empty()) {
+				std::shared_ptr<SVGGraphicsElement> referenced_element;
+				auto id_it = id_map.find(gradient_element->href_id);
+
+				if (id_it != id_map.end()) {
+					referenced_element = std::dynamic_pointer_cast<SVGRadialGradientElement>(id_it->second);
+
+					if (referenced_element) {
+						//TBD: We should only copy from template attributes not defined on the gradient element itself. 
+						gradient_element->points = referenced_element->points;
+					}
+				}
+			}
+		}
+
 
 		resolve_href(element->children[i], parent_stack, id_map, defs_map, device);
 	}
@@ -700,6 +726,34 @@ bool SVG::parse(const wchar_t* file_name, const SVGDevice& device, SVGImage& ima
 				}
 
 				new_element = linear_gradient;
+			}
+			else if (element_name == L"radialGradient") {
+				auto radial_gradient = std::make_shared<SVGRadialGradientElement>();
+				float cx = 0.5f, cy = 0.5f, r = 0.5f, fx = cx, fy = cy, fr = 0.0;
+
+				get_size_attribute(xml_reader, device.device_context, L"cx", cx);
+				get_size_attribute(xml_reader, device.device_context, L"cy", cy);
+				get_size_attribute(xml_reader, device.device_context, L"r", r);
+				get_size_attribute(xml_reader, device.device_context, L"fx", fx);
+				get_size_attribute(xml_reader, device.device_context, L"fy", fy);
+				get_size_attribute(xml_reader, device.device_context, L"fr", fr);
+
+				radial_gradient->points.push_back(cx);
+				radial_gradient->points.push_back(cy);
+				radial_gradient->points.push_back(r);
+				radial_gradient->points.push_back(fx);
+				radial_gradient->points.push_back(fy);
+				radial_gradient->points.push_back(fr);
+
+				if (get_attribute(xml_reader, L"gradientUnits", attr_value)) {
+					radial_gradient->gradient_units = attr_value;
+				}
+
+				if (get_href_id(xml_reader, attr_value)) {
+					radial_gradient->href_id = attr_value;
+				}
+
+				new_element = radial_gradient;
 			}
 			else if (element_name == L"stop") {
 				auto stop_element = std::make_shared<SVGStopElement>();

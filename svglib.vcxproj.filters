@@ -48,7 +48,7 @@
     <ClCompile Include="utils.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="linear-gradient.cpp">
+    <ClCompile Include="gradient.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="use.cpp">
@@ -89,7 +89,7 @@
     <ClInclude Include="svglib.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="linear-gradient.h">
+    <ClInclude Include="gradient.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="use.h">
