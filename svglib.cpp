@@ -22,8 +22,6 @@
 #endif
 
 void SVGImage::clear() {
-	id_map.clear();
-	defs_map.clear();
 	root_element = nullptr;
 }
 

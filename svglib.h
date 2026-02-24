@@ -53,8 +53,6 @@ struct SVGGraphicsElement {
 struct SVGImage
 {
 	std::shared_ptr<SVGGraphicsElement> root_element;
-	std::map<std::wstring, std::shared_ptr<SVGGraphicsElement>> id_map;
-	std::map<std::wstring, std::shared_ptr<SVGGraphicsElement>> defs_map;
 
 	void clear();
 };
