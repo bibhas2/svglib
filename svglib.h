@@ -27,7 +27,6 @@ struct SVGGraphicsElement {
 	std::wstring tag_name;
 	float stroke_width = 1.0f;
 	CComPtr<ID2D1Brush> fill_brush;
-	std::shared_ptr<SVGGraphicsElement> fill_gradient;
 	CComPtr<ID2D1SolidColorBrush> stroke_brush;
 	CComPtr<ID2D1StrokeStyle> stroke_style;
 	std::vector<std::shared_ptr<SVGGraphicsElement>> children;
@@ -41,7 +40,7 @@ struct SVGGraphicsElement {
 
 	virtual void render_tree(const SVGDevice& device) const;
 	virtual void render(const SVGDevice& device) const {};
-	virtual void create_presentation_assets(const std::vector<std::shared_ptr<SVGGraphicsElement>>& parent_stack, const SVGDevice& device);
+	virtual void create_presentation_assets(const std::vector<std::shared_ptr<SVGGraphicsElement>>& parent_stack, const std::map<std::wstring, std::shared_ptr<SVGGraphicsElement>>& id_map, const SVGDevice& device);
 	virtual void compute_bbox();
 	virtual ~SVGGraphicsElement() = default;
 	//Creates a deep copy of the element. Used for <use> elements.

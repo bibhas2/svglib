@@ -101,8 +101,8 @@ void SVGTextElement::render(const SVGDevice& device) const {
 	}
 }
 
-void SVGTextElement::create_presentation_assets(const std::vector<std::shared_ptr<SVGGraphicsElement>>& parent_stack, const SVGDevice& device) {
-	SVGGraphicsElement::create_presentation_assets(parent_stack, device);
+void SVGTextElement::create_presentation_assets(const std::vector<std::shared_ptr<SVGGraphicsElement>>& parent_stack, const std::map<std::wstring, std::shared_ptr<SVGGraphicsElement>>& id_map, const SVGDevice& device) {
+	SVGGraphicsElement::create_presentation_assets(parent_stack, id_map, device);
 
 	std::wstring font_family;
 	std::wstring font_weight;

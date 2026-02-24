@@ -51,6 +51,9 @@
     <ClCompile Include="linear-gradient.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="use.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="circle.h">
@@ -87,6 +90,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="linear-gradient.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="use.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

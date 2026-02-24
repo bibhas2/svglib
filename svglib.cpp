@@ -11,6 +11,7 @@
 #include "rect.h"
 #include "circle.h"
 #include "text.h"
+#include "use.h"
 #include "linear-gradient.h"
 #include "utils.h"
 
@@ -153,24 +154,6 @@ void collect_styles(IXmlReader* pReader, SVGImage& image, std::shared_ptr<SVGGra
 			new_element->styles[std::wstring(attr_name)] = std::wstring(attr_value);
 		}
 	}
-
-	//Fill gradient brush depends on the geometry of the object
-	//where it is applied. We can't create the brush here yet, so we
-	//keep the reference to the gradient.
-	auto it = new_element->styles.find(L"fill");
-
-	if (it != new_element->styles.end()) {
-		std::wstring_view style_value = it->second;
-		std::wstring_view gradient_ref_id;
-
-		if (get_href_id(style_value, gradient_ref_id)) {
-			auto gradient_it = image.id_map.find(std::wstring(gradient_ref_id));
-
-			if (gradient_it != image.id_map.end()) {
-				new_element->fill_gradient = gradient_it->second;
-			}
-		}
-	}
 }
 
 bool SVGGraphicsElement::get_style_computed(const std::vector<std::shared_ptr<SVGGraphicsElement>>& parent_stack, const std::wstring& style_name, std::wstring& style_value) {
@@ -253,7 +236,7 @@ bool apply_viewbox(ID2D1DeviceContext* device_context, std::shared_ptr<SVGGraphi
 	}
 }
 
-void SVGGraphicsElement::create_presentation_assets(const std::vector<std::shared_ptr<SVGGraphicsElement>>& parent_stack, const SVGDevice& device) {
+void SVGGraphicsElement::create_presentation_assets(const std::vector<std::shared_ptr<SVGGraphicsElement>>& parent_stack, const std::map<std::wstring, std::shared_ptr<SVGGraphicsElement>>& id_map, const SVGDevice& device) {
 	std::wstring style_value;
 	HRESULT hr = S_OK;
 
@@ -351,11 +334,15 @@ void SVGGraphicsElement::create_presentation_assets(const std::vector<std::share
 
 	if (style_value == L"none") {
 		this->fill_brush = nullptr;
-	} else if (fill_gradient) {
-		auto linear_gradient = std::dynamic_pointer_cast<SVGLinearGradientElement>(fill_gradient);
+	} else if (get_href_id(style_value, gradient_ref_id)) {
+		auto it = id_map.find(std::wstring(gradient_ref_id));
 
-		if (linear_gradient) {
-			this->fill_brush = create_linear_gradient_brush(device, *linear_gradient, *this);
+		if (it != id_map.end()) {
+			auto linear_gradient = std::dynamic_pointer_cast<SVGLinearGradientElement>(it->second);
+
+			if (linear_gradient) {
+				this->fill_brush = create_linear_gradient_brush(device, *linear_gradient, *this);
+			}
 		}
 	}
 	else {
@@ -381,6 +368,69 @@ void SVGGraphicsElement::create_presentation_assets(const std::vector<std::share
 		get_size_value(device.device_context, style_value, w)) {
 		this->stroke_width = w;
 	}
+}
+
+void resolve_href(const std::shared_ptr<SVGGraphicsElement>& element, 
+	std::vector<std::shared_ptr<SVGGraphicsElement>>& parent_stack,
+	const std::map<std::wstring, std::shared_ptr<SVGGraphicsElement>>& id_map, 
+	const std::map<std::wstring, std::shared_ptr<SVGGraphicsElement>>& defs_map,
+	const SVGDevice& device) {
+
+	if (!element) {
+		return; //Branch is skipped
+	}
+
+	element->create_presentation_assets(parent_stack, id_map, device);
+
+	parent_stack.push_back(element);
+
+	for (size_t i = 0; i < element->children.size(); ++i) {
+		auto& child = element->children[i];
+
+		if (child->tag_name == L"use") {
+			//Cast to use element to get the reference
+			auto use_element = std::dynamic_pointer_cast<SVGUseElement>(child);
+			
+			if (use_element) {
+				std::shared_ptr<SVGGraphicsElement> referenced_element;
+				auto id_it = id_map.find(use_element->href_id);
+				
+				if (id_it != id_map.end()) {
+					referenced_element = id_it->second;
+				}
+
+				if (referenced_element) {
+					//Clone the referenced element and replace the <use> element with it
+					element->children[i] = referenced_element->clone();
+				}
+				else {
+					continue; //skip branch if reference is not found
+				}
+			}
+		}
+		else if (child->tag_name == L"linearGradient") {
+			//Cast to linear gradient element to get the id
+			auto gradient_element = std::dynamic_pointer_cast<SVGLinearGradientElement>(child);
+
+			if (gradient_element && !gradient_element->href_id.empty()) {
+				std::shared_ptr<SVGGraphicsElement> referenced_element;
+				auto id_it = id_map.find(gradient_element->href_id);
+
+				if (id_it != id_map.end()) {
+					referenced_element = std::dynamic_pointer_cast<SVGGraphicsElement>(id_it->second);
+
+					if (referenced_element) {
+						//TBD: We should only copy from template attributes not defined on the gradient element itself. 
+						gradient_element->points = referenced_element->points;
+					}
+				}
+			}
+		}
+
+		resolve_href(element->children[i], parent_stack, id_map, defs_map, device);
+	}
+
+	parent_stack.pop_back();
 }
 
 bool SVG::parse(const wchar_t* file_name, const SVGDevice& device, SVGImage& image) {
@@ -412,6 +462,8 @@ bool SVG::parse(const wchar_t* file_name, const SVGDevice& device, SVGImage& ima
 	image.clear();
 
 	std::vector<std::shared_ptr<SVGGraphicsElement>> parent_stack;
+	std::map<std::wstring, std::shared_ptr<SVGGraphicsElement>> id_map;
+	std::map<std::wstring, std::shared_ptr<SVGGraphicsElement>> defs_map;
 
 	while (true) {
 		XmlNodeType node_type;
@@ -606,13 +658,11 @@ bool SVG::parse(const wchar_t* file_name, const SVGDevice& device, SVGImage& ima
 				new_element = std::make_shared<SVGDefsElement>();
 			}
 			else if (element_name == L"use") {
-				if (get_href_id(xml_reader, attr_value)) {
-					auto it = image.defs_map.find(std::wstring(attr_value));
+				auto use_element = std::make_shared<SVGUseElement>();
 
-					if (it != image.defs_map.end()) {
-						//Clone the referred element
-						new_element = it->second->clone();
-					}
+				if (get_href_id(xml_reader, attr_value)) {
+					use_element->href_id = attr_value;
+					new_element = use_element;
 				}
 			}
 			else if (element_name == L"linearGradient") {
@@ -632,6 +682,10 @@ bool SVG::parse(const wchar_t* file_name, const SVGDevice& device, SVGImage& ima
 
 				if (get_attribute(xml_reader, L"gradientUnits", attr_value)) {
 					linear_gradient->gradient_units = attr_value;
+				}
+
+				if (get_href_id(xml_reader, attr_value)) {
+					linear_gradient->href_id = attr_value;
 				}
 
 				new_element = linear_gradient;
@@ -670,10 +724,10 @@ bool SVG::parse(const wchar_t* file_name, const SVGDevice& device, SVGImage& ima
 				if (get_attribute(xml_reader, L"id", attr_value)) {
 					std::wstring id(attr_value);
 
-					image.id_map[id] = new_element;
+					id_map[id] = new_element;
 
 					if (parent_element && parent_element->tag_name == L"defs") {
-						image.defs_map[id] = new_element;
+						defs_map[id] = new_element;
 					}
 				}
 
@@ -707,7 +761,6 @@ bool SVG::parse(const wchar_t* file_name, const SVGDevice& device, SVGImage& ima
 
 				if (new_element) {
 					new_element->compute_bbox();
-					new_element->create_presentation_assets(parent_stack, device);
 				}
 			}
 			else {
@@ -775,11 +828,15 @@ bool SVG::parse(const wchar_t* file_name, const SVGDevice& device, SVGImage& ima
 
 				if (element) {
 					element->compute_bbox();
-					element->create_presentation_assets(parent_stack, device);
 				}
 			}
 		}
+
 	}
+
+	//Do a second pass to resolve references in styles (like fill="url(#gradient1)")
+	parent_stack.clear();
+	resolve_href(image.root_element, parent_stack, id_map, defs_map, device);
 
 	return true;
 }

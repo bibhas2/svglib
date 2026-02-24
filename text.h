@@ -10,7 +10,7 @@ struct SVGTextElement : public SVGGraphicsElement {
 	SVGTextElement() = default;
 	SVGTextElement(const SVGTextElement& that);
 
-	void create_presentation_assets(const std::vector<std::shared_ptr<SVGGraphicsElement>>& parent_stack, const SVGDevice& device) override;
+	void create_presentation_assets(const std::vector<std::shared_ptr<SVGGraphicsElement>>& parent_stack, const std::map<std::wstring, std::shared_ptr<SVGGraphicsElement>>& id_map, const SVGDevice& device) override;
 	void compute_bbox() override;
 	void render(const SVGDevice& device) const override;
 	std::shared_ptr<SVGGraphicsElement> clone() const override;
