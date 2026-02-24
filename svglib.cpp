@@ -729,14 +729,21 @@ bool SVG::parse(const wchar_t* file_name, const SVGDevice& device, SVGImage& ima
 			}
 			else if (element_name == L"radialGradient") {
 				auto radial_gradient = std::make_shared<SVGRadialGradientElement>();
-				float cx = 0.5f, cy = 0.5f, r = 0.5f, fx = cx, fy = cy, fr = 0.0;
+				float cx = 0.5f, cy = 0.5f, r = 0.5f, fx = 0.0, fy = 0.0, fr = 0.0;
 
 				get_size_attribute(xml_reader, device.device_context, L"cx", cx);
 				get_size_attribute(xml_reader, device.device_context, L"cy", cy);
 				get_size_attribute(xml_reader, device.device_context, L"r", r);
-				get_size_attribute(xml_reader, device.device_context, L"fx", fx);
-				get_size_attribute(xml_reader, device.device_context, L"fy", fy);
-				get_size_attribute(xml_reader, device.device_context, L"fr", fr);
+
+				if (!get_size_attribute(xml_reader, device.device_context, L"fx", fx)) {
+					fx = cx;
+				}
+				if (!get_size_attribute(xml_reader, device.device_context, L"fy", fy)) {
+					fy = cy;
+				}
+				if (!get_size_attribute(xml_reader, device.device_context, L"fr", fr)) {
+					fr = 0.0;
+				}
 
 				radial_gradient->points.push_back(cx);
 				radial_gradient->points.push_back(cy);
