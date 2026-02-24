@@ -88,6 +88,18 @@ CComPtr<ID2D1LinearGradientBrush> create_linear_gradient_brush(const SVGDevice& 
 		return nullptr;
 	}
 
+	if (linear_gradient.combined_transform) {
+		auto trans = linear_gradient.combined_transform.value();
+
+		if (linear_gradient.gradient_units == L"objectBoundingBox") {
+			trans = D2D1::Matrix3x2F::Translation(-element.bbox.left, -element.bbox.top) * 
+				trans * 
+				D2D1::Matrix3x2F::Translation(element.bbox.left, element.bbox.top);
+		}
+
+		linear_gradient_brush->SetTransform(trans);
+	}
+
 	return linear_gradient_brush;
 }
 
@@ -129,6 +141,18 @@ CComPtr<ID2D1RadialGradientBrush> create_radial_gradient_brush(const SVGDevice& 
 
 	if (!SUCCEEDED(hr)) {
 		return nullptr;
+	}
+
+	if (radial_gradient.combined_transform) {
+		auto trans = radial_gradient.combined_transform.value();
+
+		if (radial_gradient.gradient_units == L"objectBoundingBox") {
+			trans = D2D1::Matrix3x2F::Translation(-element.bbox.left, -element.bbox.top) *
+				trans *
+				D2D1::Matrix3x2F::Translation(element.bbox.left, element.bbox.top);
+		}
+
+		radial_gradient_brush->SetTransform(trans);
 	}
 
 	return radial_gradient_brush;

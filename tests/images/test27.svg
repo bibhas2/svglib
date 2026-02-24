@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200">
+<!--Test linear gradient transform-->
+  <defs>
+    <linearGradient id="gradient3" gradientTransform="rotate(45)">
+      <stop offset="0%" stop-color="red" />
+      <stop offset="100%" stop-color="blue" />
+    </linearGradient>
+  </defs>
+
+  <rect x="0" y="0" width="100" height="100" fill="url(#gradient3)" />
+  <rect x="100" y="100" width="100" height="100" fill="url(#gradient3)" />
+  <line x1="100" y1="100" x2="200" y2="100" transform="translate(100, 100) rotate(45) translate(-100, -100)" stroke="green" stroke-width="2" />
+</svg>

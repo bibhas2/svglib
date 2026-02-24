@@ -808,6 +808,20 @@ bool SVG::parse(const wchar_t* file_name, const SVGDevice& device, SVGImage& ima
 					}
 				}
 
+				if (get_attribute(xml_reader, L"gradientTransform", attr_value)) {
+					D2D1_MATRIX_3X2_F trans = D2D1::Matrix3x2F::Identity();
+
+					//If the element already has a transform (like inner <svg>), combine them
+					if (new_element->combined_transform)
+					{
+						trans = new_element->combined_transform.value();
+					}
+
+					if (build_transform_matrix(attr_value, trans)) {
+						new_element->combined_transform = trans;
+					}
+				}
+
 				collect_styles(xml_reader, image, new_element);
 
 				if (parent_element) {
