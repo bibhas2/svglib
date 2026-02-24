@@ -27,7 +27,7 @@ struct SVGGraphicsElement {
 	std::wstring tag_name;
 	float stroke_width = 1.0f;
 	CComPtr<ID2D1Brush> fill_brush;
-	CComPtr<ID2D1SolidColorBrush> stroke_brush;
+	CComPtr<ID2D1Brush> stroke_brush;
 	CComPtr<ID2D1StrokeStyle> stroke_style;
 	std::vector<std::shared_ptr<SVGGraphicsElement>> children;
 	std::optional<D2D1_MATRIX_3X2_F> combined_transform;

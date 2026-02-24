@@ -253,6 +253,7 @@ void SVGGraphicsElement::create_presentation_assets(const std::vector<std::share
 		this->stroke_brush = nullptr;
 	}
 	else {
+		std::wstring_view gradient_ref_id;
 		float r, g, b, a;
 
 		if (get_css_color(style_value, r, g, b, a)) {
@@ -265,6 +266,17 @@ void SVGGraphicsElement::create_presentation_assets(const std::vector<std::share
 
 			if (SUCCEEDED(hr)) {
 				this->stroke_brush = brush;
+			}
+		}
+		else if (get_href_id(style_value, gradient_ref_id)) {
+			auto it = id_map.find(std::wstring(gradient_ref_id));
+
+			if (it != id_map.end()) {
+				auto linear_gradient = std::dynamic_pointer_cast<SVGLinearGradientElement>(it->second);
+
+				if (linear_gradient) {
+					this->stroke_brush = create_linear_gradient_brush(device, *linear_gradient, *this);
+				}
 			}
 		}
 
