@@ -331,10 +331,26 @@ void SVGGraphicsElement::create_presentation_assets(const std::vector<std::share
 	//Get fill
 	get_style_computed(parent_stack, L"fill", style_value, L"black");
 	std::wstring_view gradient_ref_id;
+	float r, g, b, a;
+
+	//href and color can both start with #.
+	//Try to parse as color first, and if it fails, try to parse as reference.
 
 	if (style_value == L"none") {
 		this->fill_brush = nullptr;
-	} else if (get_href_id(style_value, gradient_ref_id)) {
+	} 
+	else if (get_css_color(style_value, r, g, b, a)) {
+		CComPtr<ID2D1SolidColorBrush> brush;
+
+		hr = device.device_context->CreateSolidColorBrush(
+			D2D1::ColorF(r, g, b, a * fill_opacity),
+			&brush
+		);
+		if (SUCCEEDED(hr)) {
+			this->fill_brush = brush;
+		}
+	}
+	else if (get_href_id(style_value, gradient_ref_id)) {
 		auto it = id_map.find(std::wstring(gradient_ref_id));
 
 		if (it != id_map.end()) {
@@ -342,21 +358,6 @@ void SVGGraphicsElement::create_presentation_assets(const std::vector<std::share
 
 			if (linear_gradient) {
 				this->fill_brush = create_linear_gradient_brush(device, *linear_gradient, *this);
-			}
-		}
-	}
-	else {
-		float r, g, b, a;
-
-		if (get_css_color(style_value, r, g, b, a)) {
-			CComPtr<ID2D1SolidColorBrush> brush;
-
-			hr = device.device_context->CreateSolidColorBrush(
-				D2D1::ColorF(r, g, b, a * fill_opacity),
-				&brush
-			);
-			if (SUCCEEDED(hr)) {
-				this->fill_brush = brush;
 			}
 		}
 	}
