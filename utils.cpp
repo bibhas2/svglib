@@ -182,6 +182,14 @@ bool get_href_id(std::wstring_view source, std::wstring_view& ref_id) {
 		}
 
 		source = source.substr(start + 1, end - start - 1);
+
+		//Strip out quotes if present
+		if (!source.empty() && (source[0] == L'\'' || source[0] == L'"')) {
+			source = source.substr(1);
+		}
+		if (!source.empty() && (source.back() == L'\'' || source.back() == L'"')) {
+			source = source.substr(0, source.length() - 1);
+		}
 	}
 
 	ltrim_str(source);

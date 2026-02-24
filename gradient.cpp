@@ -91,16 +91,17 @@ CComPtr<ID2D1RadialGradientBrush> create_radial_gradient_brush(const SVGDevice& 
 	auto center = D2D1::Point2F(element.bbox.left + cx * width, element.bbox.top + cy * height);
 	//Note: Offset origin is the delta from the center and not the actual position of the focal point.
 	auto gradient_origin_offset = D2D1::Point2F((fx - cx) * width, (fy - cy) * height);
-	auto radius = r * (width < height ? width : height);
+	auto radius_x = r * width;
+	auto radius_y = r * height;
 
 	if (radial_gradient.gradient_units == L"userSpaceOnUse") {
 		center = D2D1::Point2F(cx, cy);
 		gradient_origin_offset = D2D1::Point2F(fx - cx, fy - cy);
-		radius = r;
+		radius_x = radius_y = r;
 	}
 
 	HRESULT hr = device.device_context->CreateRadialGradientBrush(
-		D2D1::RadialGradientBrushProperties(center, gradient_origin_offset, radius, radius),
+		D2D1::RadialGradientBrushProperties(center, gradient_origin_offset, radius_x, radius_y),
 		gradient_stop_collection,
 		&radial_gradient_brush
 	);
