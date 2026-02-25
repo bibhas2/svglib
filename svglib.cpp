@@ -15,12 +15,6 @@
 #include "gradient.h"
 #include "utils.h"
 
-#ifdef DEBUG
-#define DEBUG_OUT(x) {std::wstringstream ws; ws << x << std::endl; OutputDebugStringW(ws.str().c_str());}
-#else
-#define DEBUG_OUT(x)
-#endif
-
 void SVGImage::clear() {
 	root_element = nullptr;
 }
@@ -123,13 +117,14 @@ void parse_css_style_string(std::wstring_view styleStr, std::map<std::wstring, s
 }
 
 //Normalizes style from both the "style" attribute and presentation attributes like "fill", "stroke", etc.
-void collect_styles(IXmlReader* pReader, SVGImage& image, std::shared_ptr<SVGGraphicsElement>& new_element) {
+void collect_styles(IXmlReader* pReader, std::shared_ptr<SVGGraphicsElement>& new_element) {
 	std::wstring_view style_str;
 
 	if (get_attribute(pReader, L"style", style_str)) {
 		parse_css_style_string(style_str, new_element->styles);
 	}
 
+	//Attribute values override styles in the "style" attribute.
 	const wchar_t* presentation_attributes[] = {
 		L"fill", 
 		L"fill-opacity", 
@@ -153,6 +148,34 @@ void collect_styles(IXmlReader* pReader, SVGImage& image, std::shared_ptr<SVGGra
 		if (get_attribute(pReader, attr_name, attr_value)) {
 			new_element->styles[std::wstring(attr_name)] = std::wstring(attr_value);
 		}
+	}
+}
+
+//Save all attributes for later processing
+void save_all_attributes(IXmlReader* pReader, std::shared_ptr<SVGGraphicsElement> element) {
+	const wchar_t* local_name = nullptr;
+	const wchar_t* attr_value = nullptr;
+	UINT len;
+	HRESULT hr = pReader->MoveToFirstAttribute();
+	
+	while (hr == S_OK) {
+		hr = pReader->GetLocalName(&local_name, &len);
+
+		if (!SUCCEEDED(hr) || local_name == nullptr) {
+			break;
+		}
+
+		std::wstring attr_name(local_name, len);
+
+		hr = pReader->GetValue(&attr_value, NULL);
+
+		if (!SUCCEEDED(hr) || attr_value == nullptr) {
+			break;
+		}
+
+		element->attributes[attr_name] = std::wstring(attr_value);
+
+		hr = pReader->MoveToNextAttribute();
 	}
 }
 
@@ -185,6 +208,28 @@ void SVGGraphicsElement::get_style_computed(const std::vector<std::shared_ptr<SV
 	if (!get_style_computed(parent_stack, style_name, style_value)) {
 		style_value = default_value;
 	}
+}
+
+bool SVGGraphicsElement::get_attribute_in_references(const std::vector<std::shared_ptr<SVGGraphicsElement>>& chain, const std::wstring& attr_name, std::wstring& attr_value) const {
+	auto it = attributes.find(attr_name);
+
+	if (it != attributes.end()) {
+		attr_value = it->second;
+
+		return true;
+	}
+
+	for (auto& element : chain) {
+		auto it = element->attributes.find(attr_name);
+
+		if (it != element->attributes.end()) {
+			attr_value = it->second;
+
+			return true;
+		}
+	}
+
+	return false;
 }
 
 bool apply_viewbox(ID2D1DeviceContext* device_context, std::shared_ptr<SVGGraphicsElement> e, IXmlReader* pReader) {
@@ -276,10 +321,10 @@ void SVGGraphicsElement::create_presentation_assets(const std::vector<std::share
 				auto radial_gradient = std::dynamic_pointer_cast<SVGRadialGradientElement>(it->second);
 
 				if (linear_gradient) {
-					this->stroke_brush = create_linear_gradient_brush(device, *linear_gradient, *this);
+					this->stroke_brush = create_linear_gradient_brush(device, id_map, *linear_gradient, *this);
 				} 
 				else if (radial_gradient) {
-					this->stroke_brush = create_radial_gradient_brush(device, *radial_gradient, *this);
+					this->stroke_brush = create_radial_gradient_brush(device, id_map, *radial_gradient, *this);
 				}
 			}
 		}
@@ -374,9 +419,9 @@ void SVGGraphicsElement::create_presentation_assets(const std::vector<std::share
 			auto radial_gradient = std::dynamic_pointer_cast<SVGRadialGradientElement>(it->second);
 
 			if (linear_gradient) {
-				this->fill_brush = create_linear_gradient_brush(device, *linear_gradient, *this);
+				this->fill_brush = create_linear_gradient_brush(device, id_map, *linear_gradient, *this);
 			} else if (radial_gradient) {
-				this->fill_brush = create_radial_gradient_brush(device, *radial_gradient, *this);
+				this->fill_brush = create_radial_gradient_brush(device, id_map, *radial_gradient, *this);
 			}
 		}
 	}
@@ -428,43 +473,6 @@ void resolve_href(const std::shared_ptr<SVGGraphicsElement>& element,
 				}
 			}
 		}
-		else if (child->tag_name == L"linearGradient") {
-			//Cast to linear gradient element to get the id
-			auto gradient_element = std::dynamic_pointer_cast<SVGLinearGradientElement>(child);
-
-			if (gradient_element && !gradient_element->href_id.empty()) {
-				std::shared_ptr<SVGGraphicsElement> referenced_element;
-				auto id_it = id_map.find(gradient_element->href_id);
-
-				if (id_it != id_map.end()) {
-					referenced_element = std::dynamic_pointer_cast<SVGLinearGradientElement>(id_it->second);
-
-					if (referenced_element) {
-						//TBD: We should only copy from template attributes not defined on the gradient element itself. 
-						gradient_element->points = referenced_element->points;
-					}
-				}
-			}
-		}
-		else if (child->tag_name == L"radialGradient") {
-			//Cast to radial gradient element to get the id
-			auto gradient_element = std::dynamic_pointer_cast<SVGRadialGradientElement>(child);
-
-			if (gradient_element && !gradient_element->href_id.empty()) {
-				std::shared_ptr<SVGGraphicsElement> referenced_element;
-				auto id_it = id_map.find(gradient_element->href_id);
-
-				if (id_it != id_map.end()) {
-					referenced_element = std::dynamic_pointer_cast<SVGRadialGradientElement>(id_it->second);
-
-					if (referenced_element) {
-						//TBD: We should only copy from template attributes not defined on the gradient element itself. 
-						gradient_element->points = referenced_element->points;
-					}
-				}
-			}
-		}
-
 
 		resolve_href(element->children[i], parent_stack, id_map, defs_map, device);
 	}
@@ -707,60 +715,14 @@ bool SVG::parse(const wchar_t* file_name, const SVGDevice& device, SVGImage& ima
 			else if (element_name == L"linearGradient") {
 				auto linear_gradient = std::make_shared<SVGLinearGradientElement>();
 
-				float x1 = 0, y1 = 0, x2 = 1.0, y2 = 0;
-
-				get_size_attribute(xml_reader, device.device_context, L"x1", x1);
-				get_size_attribute(xml_reader, device.device_context, L"y1", y1);
-				get_size_attribute(xml_reader, device.device_context, L"x2", x2);
-				get_size_attribute(xml_reader, device.device_context, L"y2", y2);
-
-				linear_gradient->points.push_back(x1);
-				linear_gradient->points.push_back(y1);
-				linear_gradient->points.push_back(x2);
-				linear_gradient->points.push_back(y2);
-
-				if (get_attribute(xml_reader, L"gradientUnits", attr_value)) {
-					linear_gradient->gradient_units = attr_value;
-				}
-
-				if (get_href_id(xml_reader, attr_value)) {
-					linear_gradient->href_id = attr_value;
-				}
+				save_all_attributes(xml_reader, linear_gradient);
 
 				new_element = linear_gradient;
 			}
 			else if (element_name == L"radialGradient") {
 				auto radial_gradient = std::make_shared<SVGRadialGradientElement>();
-				float cx = 0.5f, cy = 0.5f, r = 0.5f, fx = 0.0, fy = 0.0, fr = 0.0;
-
-				get_size_attribute(xml_reader, device.device_context, L"cx", cx);
-				get_size_attribute(xml_reader, device.device_context, L"cy", cy);
-				get_size_attribute(xml_reader, device.device_context, L"r", r);
-
-				if (!get_size_attribute(xml_reader, device.device_context, L"fx", fx)) {
-					fx = cx;
-				}
-				if (!get_size_attribute(xml_reader, device.device_context, L"fy", fy)) {
-					fy = cy;
-				}
-				if (!get_size_attribute(xml_reader, device.device_context, L"fr", fr)) {
-					fr = 0.0;
-				}
-
-				radial_gradient->points.push_back(cx);
-				radial_gradient->points.push_back(cy);
-				radial_gradient->points.push_back(r);
-				radial_gradient->points.push_back(fx);
-				radial_gradient->points.push_back(fy);
-				radial_gradient->points.push_back(fr);
-
-				if (get_attribute(xml_reader, L"gradientUnits", attr_value)) {
-					radial_gradient->gradient_units = attr_value;
-				}
-
-				if (get_href_id(xml_reader, attr_value)) {
-					radial_gradient->href_id = attr_value;
-				}
+				
+				save_all_attributes(xml_reader, radial_gradient);
 
 				new_element = radial_gradient;
 			}
@@ -822,7 +784,7 @@ bool SVG::parse(const wchar_t* file_name, const SVGDevice& device, SVGImage& ima
 					}
 				}
 
-				collect_styles(xml_reader, image, new_element);
+				collect_styles(xml_reader, new_element);
 
 				if (parent_element) {
 					//Add the new element to its parent

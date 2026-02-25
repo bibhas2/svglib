@@ -412,3 +412,36 @@ bool char_is_number(wchar_t ch) {
 	return (ch >= 48 && ch <= 57) || (ch == L'.') || (ch == L'-');
 }
 
+static void build_reference_chain_recur(const SVGGraphicsElement& element, const std::map<std::wstring, std::shared_ptr<SVGGraphicsElement>>& id_map, std::vector<std::shared_ptr<SVGGraphicsElement>>& chain) {
+	auto it = element.attributes.find(L"href");
+
+	if (it == element.attributes.end()) {
+		return;
+	}
+
+	std::wstring_view ref_id;
+
+	if (!get_href_id(it->second, ref_id)) {
+		DEBUG_OUT(L"Invalid href format: " << it->second);
+
+		return;
+	}
+
+	auto ref_it = id_map.find(std::wstring(ref_id));
+
+	if (ref_it == id_map.end()) {
+		DEBUG_OUT(L"Reference not found for id: " << ref_id);
+
+		return;
+	}
+
+	chain.push_back(ref_it->second);
+
+	build_reference_chain_recur(*ref_it->second, id_map, chain);
+}
+
+void build_reference_chain(const SVGGraphicsElement& element, const std::map<std::wstring, std::shared_ptr<SVGGraphicsElement>>& id_map, std::vector<std::shared_ptr<SVGGraphicsElement>>& chain) {
+	chain.clear();
+
+	build_reference_chain_recur(element, id_map, chain);
+}

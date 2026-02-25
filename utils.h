@@ -2,6 +2,12 @@
 
 #include <xmllite.h>
 
+#ifdef DEBUG
+#define DEBUG_OUT(x) {std::wstringstream ws; ws << x << std::endl; OutputDebugStringW(ws.str().c_str());}
+#else
+#define DEBUG_OUT(x)
+#endif
+
 struct TransformFunction {
 	std::wstring name;
 	std::vector<float> values;
@@ -20,3 +26,4 @@ bool get_size_attribute(IXmlReader* xml_reader, ID2D1DeviceContext* device_conte
 bool get_transform_functions(const std::wstring_view& source, std::vector<TransformFunction>& functions);
 bool build_transform_matrix(const std::wstring_view& transform_str, D2D1_MATRIX_3X2_F& matrix);
 bool char_is_number(wchar_t ch);
+void build_reference_chain(const SVGGraphicsElement& element, const std::map<std::wstring, std::shared_ptr<SVGGraphicsElement>>& id_map, std::vector<std::shared_ptr<SVGGraphicsElement>>& chain);
