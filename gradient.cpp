@@ -7,14 +7,32 @@ void SVGStopElement::create_presentation_assets(const std::vector<std::shared_pt
 
 }
 
-CComPtr<ID2D1GradientStopCollection> create_gradient_stop_collection(const SVGDevice& device, const std::vector<std::shared_ptr<SVGGraphicsElement>>& stop_elements) {
+CComPtr<ID2D1GradientStopCollection> create_gradient_stop_collection(const SVGDevice& device, const std::vector<std::shared_ptr<SVGGraphicsElement>>& parent_stack, const std::vector<std::shared_ptr<SVGGraphicsElement>>& stop_elements) {
 	std::vector<D2D1_GRADIENT_STOP> stops;
 
 	for (const auto& child : stop_elements) {
 		if (child->tag_name == L"stop") {
 			auto stop = std::dynamic_pointer_cast<SVGStopElement>(child);
 			if (stop) {
-				stops.push_back(D2D1::GradientStop(stop->offset, stop->stop_color));
+				std::wstring stop_color_str;
+				D2D1::ColorF stop_color = D2D1::ColorF(D2D1::ColorF::Black);
+				float stop_opacity = 1.0f;
+
+				if (stop->get_style_computed(parent_stack, L"stop-color", stop_color_str)) {
+					get_css_color(stop_color_str, stop_color.r, stop_color.g, stop_color.b, stop_color.a);
+				}
+
+				std::wstring stop_opacity_str = L"1.0";
+
+				if (stop->get_style_computed(parent_stack, L"stop-opacity", stop_opacity_str)) {
+
+					if (get_size_value(device.device_context, stop_opacity_str, stop_opacity)) {
+						stop_color.a = 255 * stop_opacity;
+					}
+				}
+
+
+				stops.push_back(D2D1::GradientStop(stop->offset, stop_color));
 			}
 		}
 	}
@@ -39,27 +57,27 @@ CComPtr<ID2D1GradientStopCollection> create_gradient_stop_collection(const SVGDe
 	return gradient_stop_collection;
 }
 
-CComPtr<ID2D1GradientStopCollection> create_gradient_stop_collection(const SVGDevice& device, const std::vector<std::shared_ptr<SVGGraphicsElement>>& chain, const SVGGraphicsElement& gradient_element) {
+CComPtr<ID2D1GradientStopCollection> create_gradient_stop_collection(const SVGDevice& device, const std::vector<std::shared_ptr<SVGGraphicsElement>>& parent_stack, const std::vector<std::shared_ptr<SVGGraphicsElement>>& chain, const SVGGraphicsElement& gradient_element) {
 	if (!gradient_element.children.empty()) {
-		return create_gradient_stop_collection(device, gradient_element.children);
+		return create_gradient_stop_collection(device, parent_stack, gradient_element.children);
 	}
 	
 	//Walk up the reference chain looking for stops
 	for (const auto& ref : chain) {
 		if (!ref->children.empty()) {
-			return create_gradient_stop_collection(device, ref->children);
+			return create_gradient_stop_collection(device, parent_stack, ref->children);
 		}
 	}
 
 	return nullptr;
 }
 
-CComPtr<ID2D1LinearGradientBrush> create_linear_gradient_brush(const SVGDevice& device, const std::map<std::wstring, std::shared_ptr<SVGGraphicsElement>>& id_map, const SVGLinearGradientElement& linear_gradient, const SVGGraphicsElement& element) {
+CComPtr<ID2D1LinearGradientBrush> create_linear_gradient_brush(const SVGDevice& device, const std::vector<std::shared_ptr<SVGGraphicsElement>>& parent_stack, const std::map<std::wstring, std::shared_ptr<SVGGraphicsElement>>& id_map, const SVGLinearGradientElement& linear_gradient, const SVGGraphicsElement& element) {
 	std::vector<std::shared_ptr<SVGGraphicsElement>> chain;
 
 	build_reference_chain(linear_gradient, id_map, chain);
 
-	CComPtr<ID2D1GradientStopCollection> gradient_stop_collection = create_gradient_stop_collection(device, chain, linear_gradient);
+	CComPtr<ID2D1GradientStopCollection> gradient_stop_collection = create_gradient_stop_collection(device, parent_stack, chain, linear_gradient);
 
 	if (!gradient_stop_collection) {
 		return nullptr;
@@ -129,12 +147,12 @@ CComPtr<ID2D1LinearGradientBrush> create_linear_gradient_brush(const SVGDevice& 
 	return linear_gradient_brush;
 }
 
-CComPtr<ID2D1RadialGradientBrush> create_radial_gradient_brush(const SVGDevice& device, const std::map<std::wstring, std::shared_ptr<SVGGraphicsElement>>& id_map, const SVGRadialGradientElement& radial_gradient, const SVGGraphicsElement& element) {
+CComPtr<ID2D1RadialGradientBrush> create_radial_gradient_brush(const SVGDevice& device, const std::vector<std::shared_ptr<SVGGraphicsElement>>& parent_stack, const std::map<std::wstring, std::shared_ptr<SVGGraphicsElement>>& id_map, const SVGRadialGradientElement& radial_gradient, const SVGGraphicsElement& element) {
 	std::vector<std::shared_ptr<SVGGraphicsElement>> chain;
 
 	build_reference_chain(radial_gradient, id_map, chain);
 
-	CComPtr<ID2D1GradientStopCollection> gradient_stop_collection = create_gradient_stop_collection(device, chain, radial_gradient);
+	CComPtr<ID2D1GradientStopCollection> gradient_stop_collection = create_gradient_stop_collection(device, parent_stack, chain, radial_gradient);
 
 	if (!gradient_stop_collection) {
 		return nullptr;

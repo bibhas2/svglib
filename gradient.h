@@ -10,10 +10,9 @@ struct SVGRadialGradientElement : public SVGGraphicsElement
 struct SVGStopElement : public SVGGraphicsElement
 {
 	float offset = 0.0f;
-	D2D1::ColorF stop_color = D2D1::ColorF(D2D1::ColorF::Black);
 
 	void create_presentation_assets(const std::vector<std::shared_ptr<SVGGraphicsElement>>& parent_stack, const std::map<std::wstring, std::shared_ptr<SVGGraphicsElement>>& id_map, const SVGDevice& device) override;
 };
 
-CComPtr<ID2D1LinearGradientBrush> create_linear_gradient_brush(const SVGDevice& device, const std::map<std::wstring, std::shared_ptr<SVGGraphicsElement>>& id_map, const SVGLinearGradientElement& linear_gradient, const SVGGraphicsElement& element);
-CComPtr<ID2D1RadialGradientBrush> create_radial_gradient_brush(const SVGDevice& device, const std::map<std::wstring, std::shared_ptr<SVGGraphicsElement>>& id_map, const SVGRadialGradientElement& radial_gradient, const SVGGraphicsElement& element);
+CComPtr<ID2D1LinearGradientBrush> create_linear_gradient_brush(const SVGDevice& device, const std::vector<std::shared_ptr<SVGGraphicsElement>>& parent_stack, const std::map<std::wstring, std::shared_ptr<SVGGraphicsElement>>& id_map, const SVGLinearGradientElement& linear_gradient, const SVGGraphicsElement& element);
+CComPtr<ID2D1RadialGradientBrush> create_radial_gradient_brush(const SVGDevice& device, const std::vector<std::shared_ptr<SVGGraphicsElement>>& parent_stack, const std::map<std::wstring, std::shared_ptr<SVGGraphicsElement>>& id_map, const SVGRadialGradientElement& radial_gradient, const SVGGraphicsElement& element);
