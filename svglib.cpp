@@ -729,6 +729,22 @@ bool SVG::parse(const wchar_t* file_name, const SVGDevice& device, SVGImage& ima
 			else if (element_name == L"stop") {
 				auto stop_element = std::make_shared<SVGStopElement>();
 
+				std::wstring_view stop_color_str;
+
+				if (get_attribute(xml_reader, L"stop-color", stop_color_str)) {
+					get_css_color(stop_color_str, stop_element->stop_color.r, stop_element->stop_color.g, stop_element->stop_color.b, stop_element->stop_color.a);
+				}
+
+				std::wstring_view stop_opacity_str = L"1.0";
+
+				if (get_attribute(xml_reader, L"stop-opacity", stop_opacity_str)) {
+					float stop_opacity = 1.0f;
+
+					if (get_size_value(device.device_context, stop_opacity_str, stop_opacity)) {
+						stop_element->stop_color.a = 255 * stop_opacity;
+					}
+				}
+
 				float offset = 0;
 
 				get_size_attribute(xml_reader, device.device_context, L"offset", offset);
