@@ -117,28 +117,31 @@ bool get_css_color(std::wstring_view source, float& r, float& g, float& b, float
 
 	size_t start = 1;
 	size_t len = 0;
+	float denom = 0.0f;
 
 	if (source.length() == 4 || source.length() == 5) {
 		//#RGB, #RGBA
 		len = 1;
+		denom = 15;
 	}
 	else {
 		//#RRGGBB, #RRGGBBAA
 		len = 2;
+		denom = 255.0f;
 	}
 
 	std::wstring r_str(source.substr(start, len)); start += len;
 	std::wstring g_str(source.substr(start, len)); start += len;
 	std::wstring b_str(source.substr(start, len)); start += len;
 
-	r = static_cast<float>(std::stoul(r_str, nullptr, 16)) / 255.0f;
-	g = static_cast<float>(std::stoul(g_str, nullptr, 16)) / 255.0f;
-	b = static_cast<float>(std::stoul(b_str, nullptr, 16)) / 255.0f;
+	r = static_cast<float>(std::stoul(r_str, nullptr, 16)) / denom;
+	g = static_cast<float>(std::stoul(g_str, nullptr, 16)) / denom;
+	b = static_cast<float>(std::stoul(b_str, nullptr, 16)) / denom;
 
 	if (source.length() == 9 || source.length() == 5) {
 		std::wstring a_str(source.substr(start, len));
 
-		a = static_cast<float>(std::stoul(a_str, nullptr, 16)) / 255.0f;
+		a = static_cast<float>(std::stoul(a_str, nullptr, 16)) / denom;
 	}
 	else {
 		a = 1.0f;
