@@ -128,6 +128,7 @@ void collect_styles(IXmlReader* pReader, std::shared_ptr<SVGGraphicsElement>& ne
 	const wchar_t* presentation_attributes[] = {
 		L"fill", 
 		L"fill-opacity", 
+		L"opacity",
 		L"stroke-opacity",
 		L"stroke-linecap",
 		L"stroke-linejoin",
@@ -385,7 +386,7 @@ void SVGGraphicsElement::create_presentation_assets(const std::vector<std::share
 	//TBD: We read this as a size, even though only % and plain numbers are allowed.
 	float fill_opacity = 1.0f;
 
-	if (get_style_computed(parent_stack, L"fill-opacity", style_value) &&
+	if ((get_style_computed(parent_stack, L"fill-opacity", style_value) || get_style_computed(parent_stack, L"opacity", style_value)) &&
 		get_size_value(device.device_context, style_value, fill_opacity)) {
 	}
 
