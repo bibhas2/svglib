@@ -20,17 +20,20 @@ void SVGPathElement::build_path(ID2D1Factory* d2d_factory, const std::wstring_vi
 
 	//SVG spec is very leinent on path syntax. White spaces are
 	//entirely optional. Numbers can either be separated by comma or spaces.
-	//Here we normalize the path by properly separating commands and numbers by spaces.
+	//Here we normalize the path by properly separating numbers by spaces so that
+	// the numbers can then be read by iostream.
 	std::wstringstream ws;
-	std::wstring_view spaces(L", \t\r\n");
+	std::wstring_view spaces(L" \t\r\n");
+	wchar_t last_ch = 0;
 
 	for (wchar_t ch : pathData) {
 		if (spaces.find_first_of(ch) != std::wstring_view::npos) {
-			//Normalize all spaces to single space
+			//Normalize all white spaces with a regular space
 			ws << L' ';
 		}
-		else if (ch == L'-') {
-			//Insert space before negative sign
+		else if (ch == L'-' && last_ch != L'E' && last_ch != L'e') {
+			//Insert space before a negative sign unless
+			//it is part of an exponent (e.g., 5e-3).
 			ws << L' ';
 			ws << ch;
 		}
@@ -40,6 +43,8 @@ void SVGPathElement::build_path(ID2D1Factory* d2d_factory, const std::wstring_vi
 		else {
 			ws << ch;
 		}
+
+		last_ch = ch;
 	}
 
 	wchar_t cmd = 0, last_cmd = 0;
