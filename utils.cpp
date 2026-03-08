@@ -83,20 +83,104 @@ bool get_css_color(std::wstring_view source, float& r, float& g, float& b, float
 		{L"teal", D2D1::ColorF::Teal},
 	};
 
+	// Trim whitespace
+	ltrim_str(source);
+	rtrim_str(source);
+
 	if (source.empty()) {
 		return false;
 	}
-
-	// Trim leading whitespace
-	ltrim_str(source);
 
 	if (source == L"none") {
 		return false;
 	}
 
-	//See if it is a named color
-	if (source[0] != L'#') {
+	if (source.find(L"rgba") == 0 && source.rfind(L")") == source.length() - 1) {
+		auto parts = split_string(source.substr(5, source.length() - 6), L",");
+		
+		if (parts.size() != 4) {
+			return false;
+		}
+
+		float denom = 255.0f;
+
+		if (parts[0].find(L"%") != std::wstring_view::npos) {
+			denom = 100.0f;
+		}
+
+		r = std::stof(std::wstring(parts[0])) / denom;
+		g = std::stof(std::wstring(parts[1])) / denom;
+		b = std::stof(std::wstring(parts[2])) / denom;
+		a = std::stof(std::wstring(parts[3])) / denom;
+
+		return true;
+	}
+	else if (source.find(L"rgb") == 0 && source.rfind(L")") == source.length() - 1) {
+		auto parts = split_string(source.substr(4, source.length() - 5), L",");
+
+		if (parts.size() != 3) {
+			return false;
+		}
+
+		float denom = 255.0f;
+
+		if (parts[0].find(L"%") != std::wstring_view::npos) {
+			denom = 100.0f;
+		}
+
+		r = std::stof(std::wstring(parts[0])) / denom;
+		g = std::stof(std::wstring(parts[1])) / denom;
+		b = std::stof(std::wstring(parts[2])) / denom;
+		a = 1.0;
+
+		return true;
+	}
+	else if (source[0] == L'#') {
+
+		//Parse  color from the source. Possible formats are #RGB, #RGBA, #RRGGBB, #RRGGBBAA
+
+		if ((source.length() != 4 && source.length() != 5 && source.length() != 7 && source.length() != 9) || source[0] != L'#') {
+			return false;
+		}
+
+		size_t start = 1;
+		size_t len = 0;
+		float denom = 0.0f;
+
+		if (source.length() == 4 || source.length() == 5) {
+			//#RGB, #RGBA
+			len = 1;
+			denom = 15;
+		}
+		else {
+			//#RRGGBB, #RRGGBBAA
+			len = 2;
+			denom = 255.0f;
+		}
+
+		std::wstring r_str(source.substr(start, len)); start += len;
+		std::wstring g_str(source.substr(start, len)); start += len;
+		std::wstring b_str(source.substr(start, len)); start += len;
+
+		r = static_cast<float>(std::stoul(r_str, nullptr, 16)) / denom;
+		g = static_cast<float>(std::stoul(g_str, nullptr, 16)) / denom;
+		b = static_cast<float>(std::stoul(b_str, nullptr, 16)) / denom;
+
+		if (source.length() == 9 || source.length() == 5) {
+			std::wstring a_str(source.substr(start, len));
+
+			a = static_cast<float>(std::stoul(a_str, nullptr, 16)) / denom;
+		}
+		else {
+			a = 1.0f;
+		}
+
+		return true;
+	}
+	else {
+		//See if it is a named color
 		auto iter = named_colors.find(std::wstring(source));
+
 		if (iter != named_colors.end()) {
 			UINT32 color = iter->second;
 
@@ -109,45 +193,7 @@ bool get_css_color(std::wstring_view source, float& r, float& g, float& b, float
 		}
 	}
 
-	//Parse  color from the source. Possible formats are #RGB, #RGBA, #RRGGBB, #RRGGBBAA
-
-	if ((source.length() != 4 && source.length() != 5 && source.length() != 7 && source.length() != 9) || source[0] != L'#') {
-		return false;
-	}
-
-	size_t start = 1;
-	size_t len = 0;
-	float denom = 0.0f;
-
-	if (source.length() == 4 || source.length() == 5) {
-		//#RGB, #RGBA
-		len = 1;
-		denom = 15;
-	}
-	else {
-		//#RRGGBB, #RRGGBBAA
-		len = 2;
-		denom = 255.0f;
-	}
-
-	std::wstring r_str(source.substr(start, len)); start += len;
-	std::wstring g_str(source.substr(start, len)); start += len;
-	std::wstring b_str(source.substr(start, len)); start += len;
-
-	r = static_cast<float>(std::stoul(r_str, nullptr, 16)) / denom;
-	g = static_cast<float>(std::stoul(g_str, nullptr, 16)) / denom;
-	b = static_cast<float>(std::stoul(b_str, nullptr, 16)) / denom;
-
-	if (source.length() == 9 || source.length() == 5) {
-		std::wstring a_str(source.substr(start, len));
-
-		a = static_cast<float>(std::stoul(a_str, nullptr, 16)) / denom;
-	}
-	else {
-		a = 1.0f;
-	}
-
-	return true;
+	return false;
 }
 
 bool get_attribute(IXmlReader* xml_reader, const wchar_t* attr_name, std::wstring_view& attr_value) {
