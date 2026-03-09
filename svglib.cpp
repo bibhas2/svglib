@@ -116,8 +116,11 @@ void parse_css_style_string(std::wstring_view styleStr, std::map<std::wstring, s
 	}
 }
 
-//Normalizes style from both the "style" attribute and presentation attributes like "fill", "stroke", etc.
-void collect_styles(IXmlReader* pReader, std::shared_ptr<SVGGraphicsElement>& new_element) {
+//Presentation attributes like fill and stroke are special. They could be inherited from the parents.
+//They may also be supplied as CSS styles in the style attribute. 
+//This function saves a handful of presentation attributes by collecting them from XML tag attributes as well
+//as from the CSS style.
+void save_presentation_attributes(IXmlReader* pReader, std::shared_ptr<SVGGraphicsElement>& new_element) {
 	std::wstring_view style_str;
 
 	if (get_attribute(pReader, L"style", style_str)) {
@@ -481,7 +484,7 @@ void resolve_href(const std::shared_ptr<SVGGraphicsElement>& element,
 	parent_stack.pop_back();
 }
 
-bool SVG::parse(const wchar_t* file_name, const SVGDevice& device, SVGImage& image) {
+bool SVG::load(const wchar_t* file_name, const SVGDevice& device, SVGImage& image) {
 	CComPtr<IXmlReader> xml_reader;
 
 	HRESULT hr = ::CreateXmlReader(__uuidof(IXmlReader), (void**)&xml_reader, NULL);
@@ -715,7 +718,10 @@ bool SVG::parse(const wchar_t* file_name, const SVGDevice& device, SVGImage& ima
 			}
 			else if (element_name == L"linearGradient") {
 				auto linear_gradient = std::make_shared<SVGLinearGradientElement>();
-
+				
+				//Gradient attrubutes like x1, y1 are special since they could be inherited
+				//from a reference chain. We can't do that until we resolve the references, 
+				// so we save them as attributes for now and process them later in create_presentation_assets.
 				save_all_attributes(xml_reader, linear_gradient);
 
 				new_element = linear_gradient;
@@ -723,6 +729,9 @@ bool SVG::parse(const wchar_t* file_name, const SVGDevice& device, SVGImage& ima
 			else if (element_name == L"radialGradient") {
 				auto radial_gradient = std::make_shared<SVGRadialGradientElement>();
 				
+				//Gradient attrubutes like cx, cy are special since they could be inherited
+				//from a reference chain. We can't do that until we resolve the references, 
+				// so we save them as attributes for now and process them later in create_presentation_assets.
 				save_all_attributes(xml_reader, radial_gradient);
 
 				new_element = radial_gradient;
@@ -784,7 +793,7 @@ bool SVG::parse(const wchar_t* file_name, const SVGDevice& device, SVGImage& ima
 					}
 				}
 
-				collect_styles(xml_reader, new_element);
+				save_presentation_attributes(xml_reader, new_element);
 
 				if (parent_element) {
 					//Add the new element to its parent

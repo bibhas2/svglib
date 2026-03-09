@@ -50,7 +50,7 @@ public:
                 return;
 			}
 
-			if (SVG::parse(filename.c_str(), device, image)) {
+			if (SVG::load(filename.c_str(), device, image)) {
 				device.redraw();
             }
             else {

@@ -61,7 +61,7 @@ struct SVGImage
 
 struct SVG
 {
-	static bool parse(const wchar_t* file_name, const SVGDevice& device, SVGImage& image);
+	static bool load(const wchar_t* file_name, const SVGDevice& device, SVGImage& image);
 	static void render(const SVGDevice& device, const SVGImage& image);
 };
 
