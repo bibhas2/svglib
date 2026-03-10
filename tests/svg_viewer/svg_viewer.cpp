@@ -11,9 +11,6 @@
 
 #pragma comment(lib, "D3D11.lib")
 #pragma comment(lib, "d2d1.lib")
-#pragma comment(lib, "windowscodecs.lib")
-//We need dxguid.lib for some of the CLSID and IID definitions
-#pragma comment(lib, "dxguid.lib")
 #pragma comment(lib, "xmllite.lib")
 #pragma comment(lib, "dwrite.lib")
 //Needed by mgui
