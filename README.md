@@ -47,7 +47,9 @@ SVGDevice device;
 HWND m_wnd = ...;
 
 //Setup the device
-device.init(m_wnd);
+bool status = device.init(m_wnd);
+
+//Check status
 ```
 
 Each SVG image is reprsented by a ``SVGImage``. We can load an image like this.
@@ -102,3 +104,11 @@ bool handle_event(UINT message, WPARAM wParam, LPARAM lParam) {
 Direct2D and DirectWrite pretty much map the SVG spec 1:1. This made writing ``svglib`` fairly trivial. The only exception is ``textPath``. I have no plans to support ``textPath``.
 
 ``clipPath`` is also not supported at this time. But, a support is planned in the future.
+
+## Security and Vulnerability
+Always make sure that the ``SVGDevice`` was initialized properly. Using a half initialized device can cause unpredicatble results. The library does not validate the device when it's used later to load and render images.
+
+The SVG image files must be trusted. Please note:
+
+- No protection is provided by the library for depth limit for recursive XML structures. 
+- No overflow check is done for the coordinate values in the SVG file. 
