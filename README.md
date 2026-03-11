@@ -1,5 +1,5 @@
 ## What is It?
-``svglib`` is a SVG file parser and renderer library for Windows. It uses Direct2D for GPU assisted rendering and XMLLite for XML parsing. They are core components of Windows. You don't need to download any external libraries to compile and distribute an application that uses ``svglib``.
+``svglib`` is a SVG file parser and renderer library for Windows. It uses Direct2D for GPU assisted rendering and XMLLite for XML parsing. They are core components of Windows. You don't need to download any external libraries to compile and distribute applications that use ``svglib``.
 
 ## Why?
 

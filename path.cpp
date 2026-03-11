@@ -1,6 +1,8 @@
 #include "svglib.h"
 #include "path.h"
 #include <cwchar>
+#include <cerrno>
+#include <climits>
 
 SVGPathElement::SVGPathElement(const SVGPathElement& that) :
 	SVGGraphicsElement(that),
@@ -15,7 +17,7 @@ std::shared_ptr<SVGGraphicsElement> SVGPathElement::clone() const {
 // If there is no command letter, returns false and cmd is not modified. 
 // Advances pos to the next character after the command letter if found.
 //path_data must be null-terminated.
-bool get_command(const std::wstring_view& path_data, size_t& pos, wchar_t& cmd) {
+static bool get_command(const std::wstring_view& path_data, size_t& pos, wchar_t& cmd) {
 	std::wstring_view spaces(L" \t\r\n");
 
 	while (pos < path_data.length()) {
@@ -35,10 +37,10 @@ bool get_command(const std::wstring_view& path_data, size_t& pos, wchar_t& cmd) 
 }
 
 //Gets a floating point number at the current position. 
-// If there is no command letter, returns false and cmd is not modified. 
-// Advances pos to the next character after the command letter if found.
+//Returns false if float conversion fails. 
+//Advances pos to the next character after the number if successful.
 //path_data must be null-terminated, else std::wcstof will fail.
-bool get_float(const std::wstring_view& path_data, size_t& pos, float& value) {
+static bool get_float_in_path(const std::wstring_view& path_data, size_t& pos, float& value) {
 	std::wstring_view spaces(L" \t\r\n");
 
 	while (pos < path_data.length()) {
@@ -58,10 +60,12 @@ bool get_float(const std::wstring_view& path_data, size_t& pos, float& value) {
 
 		wchar_t* end = 0;
 
+		errno = 0; //clear
+
 		value = std::wcstof(path_data.data() + pos, &end);
 
-		if (end == path_data.data() + pos) {
-			//No number found
+		if (end == path_data.data() + pos || errno == ERANGE) {
+			//No number found, over or underflow
 			return false;
 		}
 
@@ -74,10 +78,10 @@ bool get_float(const std::wstring_view& path_data, size_t& pos, float& value) {
 }
 
 //Gets an int number at the current position. 
-// If there is no command letter, returns false and cmd is not modified. 
-// Advances pos to the next character after the command letter if found.
+//Returns false if an int conversion fails. 
+//Advances pos to the next character after the number if successful.
 //path_data must be null-terminated, else std::wcstol will fail.
-bool get_int(const std::wstring_view& path_data, size_t& pos, int& value) {
+static bool get_int_in_path(const std::wstring_view& path_data, size_t& pos, int& value) {
 	std::wstring_view spaces(L" \t\r\n");
 
 	while (pos < path_data.length()) {
@@ -97,13 +101,15 @@ bool get_int(const std::wstring_view& path_data, size_t& pos, int& value) {
 
 		wchar_t* end = 0;
 
-		value = std::wcstol(path_data.data() + pos, &end, 10);
+		errno = 0; //clear
+		long result_long = std::wcstol(path_data.data() + pos, &end, 10);
 
-		if (end == path_data.data() + pos) {
-			//No number found
+		if (end == path_data.data() + pos || errno == ERANGE || result_long > INT_MAX || result_long < INT_MIN) {
+			//No number found, over or underflow
 			return false;
 		}
 
+		value = static_cast<int>(result_long);
 		pos = end - path_data.data();
 
 		return true;
@@ -164,7 +170,7 @@ void SVGPathElement::build_path(ID2D1Factory* d2d_factory, const std::wstring_vi
 				pSink->EndFigure(D2D1_FIGURE_END_OPEN);
 			}
 
-			if (!get_float(path_data, pos, x) || !get_float(path_data, pos, y)) {
+			if (!get_float_in_path(path_data, pos, x) || !get_float_in_path(path_data, pos, y)) {
 				//Invalid path data
 				return;
 			}
@@ -183,7 +189,7 @@ void SVGPathElement::build_path(ID2D1Factory* d2d_factory, const std::wstring_vi
 		else if (cmd == L'L' || cmd == L'l') {
 			float x = 0.0, y = 0.0;
 
-			if (!get_float(path_data, pos, x) || !get_float(path_data, pos, y)) {
+			if (!get_float_in_path(path_data, pos, x) || !get_float_in_path(path_data, pos, y)) {
 				//Invalid path data
 				return;
 			}
@@ -202,7 +208,7 @@ void SVGPathElement::build_path(ID2D1Factory* d2d_factory, const std::wstring_vi
 		else if (cmd == L'H' || cmd == L'h') {
 			float x = 0.0;
 
-			if (!get_float(path_data, pos, x)) {
+			if (!get_float_in_path(path_data, pos, x)) {
 				//Invalid path data
 				return;
 			}
@@ -219,7 +225,7 @@ void SVGPathElement::build_path(ID2D1Factory* d2d_factory, const std::wstring_vi
 		else if (cmd == L'V' || cmd == L'v') {
 			float y = 0.0;
 
-			if (!get_float(path_data, pos, y)) {
+			if (!get_float_in_path(path_data, pos, y)) {
 				//Invalid path data
 				return;
 			}
@@ -236,10 +242,10 @@ void SVGPathElement::build_path(ID2D1Factory* d2d_factory, const std::wstring_vi
 		else if (cmd == L'Q' || cmd == L'q') {
 			float x1 = 0.0, y1 = 0.0, x2 = 0.0, y2 = 0.0;
 
-			if (!get_float(path_data, pos, x1) || 
-				!get_float(path_data, pos, y1) ||
-				!get_float(path_data, pos, x2) ||
-				!get_float(path_data, pos, y2)) {
+			if (!get_float_in_path(path_data, pos, x1) || 
+				!get_float_in_path(path_data, pos, y1) ||
+				!get_float_in_path(path_data, pos, x2) ||
+				!get_float_in_path(path_data, pos, y2)) {
 				//Invalid path data
 				return;
 			}
@@ -262,8 +268,8 @@ void SVGPathElement::build_path(ID2D1Factory* d2d_factory, const std::wstring_vi
 		else if (cmd == L'T' || cmd == L't') {
 			float x1 = 0.0, y1 = 0.0, x2 = 0.0, y2 = 0.0;
 
-			if (!get_float(path_data, pos, x2) ||
-				!get_float(path_data, pos, y2)) {
+			if (!get_float_in_path(path_data, pos, x2) ||
+				!get_float_in_path(path_data, pos, y2)) {
 				//Invalid path data
 				return;
 			}
@@ -294,12 +300,12 @@ void SVGPathElement::build_path(ID2D1Factory* d2d_factory, const std::wstring_vi
 		else if (cmd == L'C' || cmd == L'c') {
 			float x1 = 0.0, y1 = 0.0, x2 = 0.0, y2 = 0.0, x3 = 0.0, y3 = 0.0;
 
-			if (!get_float(path_data, pos, x1) ||
-				!get_float(path_data, pos, y1) ||
-				!get_float(path_data, pos, x2) ||
-				!get_float(path_data, pos, y2) ||
-				!get_float(path_data, pos, x3) ||
-				!get_float(path_data, pos, y3)) {
+			if (!get_float_in_path(path_data, pos, x1) ||
+				!get_float_in_path(path_data, pos, y1) ||
+				!get_float_in_path(path_data, pos, x2) ||
+				!get_float_in_path(path_data, pos, y2) ||
+				!get_float_in_path(path_data, pos, x3) ||
+				!get_float_in_path(path_data, pos, y3)) {
 				//Invalid path data
 				return;
 			}
@@ -324,10 +330,10 @@ void SVGPathElement::build_path(ID2D1Factory* d2d_factory, const std::wstring_vi
 		else if (cmd == L'S' || cmd == L's') {
 			float x1 = 0.0, y1 = 0.0, x2 = 0.0, y2 = 0.0, x3 = 0.0, y3 = 0.0;
 
-			if (!get_float(path_data, pos, x2) ||
-				!get_float(path_data, pos, y2) ||
-				!get_float(path_data, pos, x3) ||
-				!get_float(path_data, pos, y3)) {
+			if (!get_float_in_path(path_data, pos, x2) ||
+				!get_float_in_path(path_data, pos, y2) ||
+				!get_float_in_path(path_data, pos, x3) ||
+				!get_float_in_path(path_data, pos, y3)) {
 				//Invalid path data
 				return;
 			}
@@ -362,13 +368,13 @@ void SVGPathElement::build_path(ID2D1Factory* d2d_factory, const std::wstring_vi
 			float rx = 0.0, ry = 0.0, x_axis_rotation = 0.0, x = 0.0, y = 0.0;
 			int large_arc_flag = 0, sweep_flag = 0;
 
-			if (!get_float(path_data, pos, rx) ||
-				!get_float(path_data, pos, ry) ||
-				!get_float(path_data, pos, x_axis_rotation) ||
-				!get_int(path_data, pos, large_arc_flag) ||
-				!get_int(path_data, pos, sweep_flag) ||
-				!get_float(path_data, pos, x) ||
-				!get_float(path_data, pos, y)) {
+			if (!get_float_in_path(path_data, pos, rx) ||
+				!get_float_in_path(path_data, pos, ry) ||
+				!get_float_in_path(path_data, pos, x_axis_rotation) ||
+				!get_int_in_path(path_data, pos, large_arc_flag) ||
+				!get_int_in_path(path_data, pos, sweep_flag) ||
+				!get_float_in_path(path_data, pos, x) ||
+				!get_float_in_path(path_data, pos, y)) {
 				//Invalid path data
 				return;
 			}
