@@ -892,7 +892,6 @@ bool SVG::load(const wchar_t* file_name, const SVGDevice& device, SVGImage& imag
 void SVG::render(const SVGDevice& device, const SVGImage& image)
 {
 	device.device_context->BeginDraw();
-	device.device_context->Clear(D2D1::ColorF(D2D1::ColorF::White));
 
 	if (image.root_element) {
 		//Render the SVG element tree
@@ -905,11 +904,10 @@ void SVG::render(const SVGDevice& device, const SVGImage& image)
 void SVG::render(const SVGDevice& device, const SVGImage& image, float x, float y, float scale)
 {
 	device.device_context->BeginDraw();
-	device.device_context->Clear(D2D1::ColorF(D2D1::ColorF::White));
 
 	if (image.root_element) {
 		D2D1_MATRIX_3X2_F old_transform;
-		D2D1_MATRIX_3X2_F display_transform = D2D1::Matrix3x2F::Translation(x, y) * D2D1::Matrix3x2F::Scale(scale, scale);
+		D2D1_MATRIX_3X2_F display_transform = D2D1::Matrix3x2F::Scale(scale, scale) * D2D1::Matrix3x2F::Translation(x, y);
 
 		device.device_context->GetTransform(&old_transform);
 
@@ -923,6 +921,12 @@ void SVG::render(const SVGDevice& device, const SVGImage& image, float x, float 
 		device.device_context->SetTransform(old_transform);
 	}
 
+	device.device_context->EndDraw();
+}
+
+void SVG::clear(const SVGDevice& device, float red, float green, float blue, float alpha) {
+	device.device_context->BeginDraw();
+	device.device_context->Clear(D2D1::ColorF(red, green, blue, alpha));
 	device.device_context->EndDraw();
 }
 

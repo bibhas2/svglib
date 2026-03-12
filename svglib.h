@@ -84,6 +84,11 @@ struct SVG
 	//If an image was already loaded in the SVGImage structure, it will be cleared before loading the new one.
 	static bool load(const wchar_t* file_name, const SVGDevice& device, SVGImage& image);
 
+	//Clears the display surface by filling it with the specified color. The default color is white.
+	//This is optional and can be called before rendering an SVGImage to clear any previous content. 
+	//It is not necessary to call this function before every render, only when you want to clear the previous content.
+	static void clear(const SVGDevice& device, float red=1.0f, float green=1.0f, float blue=1.0f, float alpha=1.0f);
+
 	//Renders the SVGImage on the given device. The image must have been loaded using the same device.
 	static void render(const SVGDevice& device, const SVGImage& image);
 

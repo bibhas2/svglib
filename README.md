@@ -78,6 +78,8 @@ bool handle_event(UINT message, WPARAM wParam, LPARAM lParam) {
         //WM_PAINT messages.
         BeginPaint(m_wnd, &ps);
 
+        //Clear the device with a white background
+        SVG::clear(device);
         //Render the SVG
         SVG::render(device, image);
 
