@@ -27,6 +27,7 @@ void check_throw(HRESULT hr) {
 class MainWindow : public CFrame {
     SVGDevice device;
     SVGImage image;
+    float scale = 1.0;
 public:
     
     void create() {
@@ -56,6 +57,16 @@ public:
         }
         else if (id == IDM_EXIT) {
             onClose();
+        } else if (id == ID_VIEW_ZOOMIN) {
+            scale *= 1.25f;
+            device.redraw();
+        }
+        else if (id == ID_VIEW_ZOOMOUT) {
+            scale /= 1.25f;
+            device.redraw();
+        } else if (id == ID_VIEW_ACTUALSIZE) {
+            scale = 1.0f;
+            device.redraw();
         }
 	}
 
@@ -68,7 +79,7 @@ public:
             //invalidated region, or else we will get continuous
             //WM_PAINT messages.
             BeginPaint(m_wnd, &ps);
-            SVG::render(device, image);
+            SVG::render(device, image, 20, 20, scale);
             EndPaint(m_wnd, &ps);
             break;
         case WM_SIZE:

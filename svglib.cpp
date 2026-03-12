@@ -41,15 +41,15 @@ void SVGGraphicsElement::render_tree(const SVGDevice& device) const {
 	DEBUG_OUT(L"Rendering element: " << tag_name);
 
 	//Save the old transform
-	D2D1_MATRIX_3X2_F oldTransform;
+	D2D1_MATRIX_3X2_F old_transform;
 
 	if (combined_transform) {
 		DEBUG_OUT(L"Applying transform");
-		device.device_context->GetTransform(&oldTransform);
+		device.device_context->GetTransform(&old_transform);
 
-		auto totalTransform = combined_transform.value() * oldTransform;
+		auto total_transform = combined_transform.value() * old_transform;
 
-		device.device_context->SetTransform(totalTransform);
+		device.device_context->SetTransform(total_transform);
 	}
 
 	render(device);
@@ -61,7 +61,7 @@ void SVGGraphicsElement::render_tree(const SVGDevice& device) const {
 
 	if (combined_transform) {
 		DEBUG_OUT(L"Restoring transform");
-		device.device_context->SetTransform(oldTransform);
+		device.device_context->SetTransform(old_transform);
 	}
 }
 
@@ -897,6 +897,30 @@ void SVG::render(const SVGDevice& device, const SVGImage& image)
 	if (image.root_element) {
 		//Render the SVG element tree
 		image.root_element->render_tree(device);
+	}
+
+	device.device_context->EndDraw();
+}
+
+void SVG::render(const SVGDevice& device, const SVGImage& image, float x, float y, float scale)
+{
+	device.device_context->BeginDraw();
+	device.device_context->Clear(D2D1::ColorF(D2D1::ColorF::White));
+
+	if (image.root_element) {
+		D2D1_MATRIX_3X2_F old_transform;
+		D2D1_MATRIX_3X2_F display_transform = D2D1::Matrix3x2F::Translation(x, y) * D2D1::Matrix3x2F::Scale(scale, scale);
+
+		device.device_context->GetTransform(&old_transform);
+
+		auto total_transform = display_transform * old_transform;
+
+		device.device_context->SetTransform(total_transform);
+
+		//Render the SVG element tree
+		image.root_element->render_tree(device);
+
+		device.device_context->SetTransform(old_transform);
 	}
 
 	device.device_context->EndDraw();

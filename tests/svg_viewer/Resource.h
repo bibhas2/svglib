@@ -1,6 +1,6 @@
 //{{NO_DEPENDENCIES}}
 // Microsoft Visual C++ generated include file.
-// Used by win_pages.rc
+// Used by svg_viewer.rc
 //
 #define IDC_MYICON                      2
 #define IDD_WINPAGES_DIALOG             102
@@ -13,6 +13,9 @@
 #define IDC_WINPAGES                    109
 #define IDR_MAINFRAME                   128
 #define ID_FILE_OPEN                    32771
+#define ID_VIEW_ZOOMIN                  32772
+#define ID_VIEW_ZOOMOUT                 32773
+#define ID_VIEW_ACTUALSIZE              32774
 #define IDC_STATIC                      -1
 
 // Next default values for new objects
@@ -21,7 +24,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NO_MFC                     1
 #define _APS_NEXT_RESOURCE_VALUE        129
-#define _APS_NEXT_COMMAND_VALUE         32772
+#define _APS_NEXT_COMMAND_VALUE         32775
 #define _APS_NEXT_CONTROL_VALUE         1000
 #define _APS_NEXT_SYMED_VALUE           110
 #endif
